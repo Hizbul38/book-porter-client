@@ -29,7 +29,7 @@ const HeroBanner = () => {
           </p>
 
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 leading-snug mb-4">
-            Get Your Favorite Books Delivered<br />Right to Your Door.
+            Get Your Favorite Books Easily.
           </h1>
 
           <p className="text-gray-600 mb-5">
