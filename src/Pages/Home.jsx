@@ -4,6 +4,7 @@ import Coverage from '../Components/Coverage';
 import LatestBooks from '../Components/LatestBooks';
 import WhyChooseUs from '../Components/WhyChooseUs';
 import AnimatedStats from '../Components/AnimatedStats';
+import PartnerSection from '../Components/PartnerSection';
 
 const Home = () => {
     return (
@@ -13,6 +14,7 @@ const Home = () => {
             <Coverage></Coverage>
             <WhyChooseUs></WhyChooseUs>
             <AnimatedStats></AnimatedStats>
+            <PartnerSection></PartnerSection>
         </div>
     );
 };
