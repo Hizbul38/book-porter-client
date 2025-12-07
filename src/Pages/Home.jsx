@@ -6,6 +6,7 @@ import WhyChooseUs from '../Components/WhyChooseUs';
 import AnimatedStats from '../Components/AnimatedStats';
 import PartnerSection from '../Components/PartnerSection';
 import NewsletterSection from '../Components/NewsletterSection';
+import Footer from '../Components/Footer';
 
 const Home = () => {
     return (
@@ -17,6 +18,7 @@ const Home = () => {
             <AnimatedStats></AnimatedStats>
             <PartnerSection></PartnerSection>
             <NewsletterSection></NewsletterSection>
+            <Footer></Footer>
         </div>
     );
 };
