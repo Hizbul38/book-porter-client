@@ -18,7 +18,6 @@ const Home = () => {
             <AnimatedStats></AnimatedStats>
             <PartnerSection></PartnerSection>
             <NewsletterSection></NewsletterSection>
-            <Footer></Footer>
         </div>
     );
 };

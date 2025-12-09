@@ -1,3 +1,5 @@
+import { ImBook } from "react-icons/im";
+
 const Footer = () => {
   const year = new Date().getFullYear();
 
@@ -7,7 +9,9 @@ const Footer = () => {
 
         {/* Brand */}
         <div>
-          <h2 className="text-xl font-bold text-white mb-2">BookPorter</h2>
+          <span className="flex items-center gap-1 text-xl font-bold text-blue-600">
+                    <ImBook /> BookPorter
+                  </span>
           <p className="text-sm text-gray-400">
             Library-to-home book delivery service for students, readers and
             researchers. Borrow books from nearby libraries without leaving
