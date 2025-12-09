@@ -13,72 +13,82 @@ const Navbar = () => {
 
   return (
     <nav className="bg-white shadow-sm">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="text-xl font-bold text-blue-600">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        {/* LEFT: Logo */}
+        <Link to="/" className="text-xl font-bold text-blue-600 shrink-0">
           <span className="flex items-center gap-1">
             <ImBook /> BookPorter
           </span>
         </Link>
 
-        {/* Desktop menu */}
-        <div className="hidden md:flex items-center gap-6 text-sm">
-          <NavLink to="/" className="text-gray-700">
+        {/* MIDDLE: Nav links (center) */}
+        <div className="hidden md:flex flex-1 items-center justify-center gap-6 text-sm">
+          <NavLink
+            to="/"
+            className={({ isActive }) =>
+              `text-gray-700 ${isActive ? "font-semibold text-blue-600" : ""}`
+            }
+          >
             Home
           </NavLink>
-          <NavLink to="/all-books" className="text-gray-700">
+          <NavLink
+            to="/all-books"
+            className={({ isActive }) =>
+              `text-gray-700 ${isActive ? "font-semibold text-blue-600" : ""}`
+            }
+          >
             All Books
           </NavLink>
-          <NavLink to="/dashboard" className="text-gray-700">
+          <NavLink
+            to="/dashboard"
+            className={({ isActive }) =>
+              `text-gray-700 ${isActive ? "font-semibold text-blue-600" : ""}`
+            }
+          >
             Dashboard
           </NavLink>
+        </div>
 
-          {/* ✅ Auth part */}
+        {/* RIGHT: Auth controls (desktop) */}
+        <div className="hidden md:flex items-center gap-3 shrink-0">
           {user ? (
-            // logged in: show avatar + logout
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                {user.photoURL ? (
-                  <img
-                    src={user.photoURL}
-                    alt={user.displayName || "User"}
-                    className="w-8 h-8 rounded-full object-cover border"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-700">
-                    {(user.displayName && user.displayName[0]) || "U"}
-                  </div>
-                )}
-                <span className="text-xs text-gray-700 hidden lg:inline">
-                  {user.displayName || "User"}
-                </span>
-              </div>
+            <>
+              {user.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt="User"
+                  className="w-8 h-8 rounded-full object-cover border"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-700">
+                  {(user.email && user.email[0].toUpperCase()) || "U"}
+                </div>
+              )}
               <button
                 onClick={handleLogout}
                 className="text-xs px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-100"
               >
                 Logout
               </button>
-            </div>
+            </>
           ) : (
-            // not logged in: show login + register
-            <div className="flex items-center gap-3">
-              <Link to="/login" className="text-gray-700">
+            <>
+              <Link to="/login" className="text-gray-700 text-sm">
                 Login
               </Link>
               <Link
                 to="/register"
-                className="text-gray-700"
+                className="text-gray-700 text-sm"
               >
                 Register
               </Link>
-            </div>
+            </>
           )}
         </div>
 
-        {/* Mobile button */}
+        {/* RIGHT: Mobile menu button */}
         <button
-          className="md:hidden border px-2 py-1 rounded text-sm"
+          className="md:hidden border px-2 py-1 rounded text-sm ml-auto"
           onClick={() => setOpen(!open)}
         >
           Menu
@@ -106,25 +116,19 @@ const Navbar = () => {
             Dashboard
           </NavLink>
 
-          {/* ✅ Mobile auth part */}
           {user ? (
             <div className="mt-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {user.photoURL ? (
-                  <img
-                    src={user.photoURL}
-                    alt={user.displayName || "User"}
-                    className="w-8 h-8 rounded-full object-cover border"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-700">
-                    {(user.displayName && user.displayName[0]) || "U"}
-                  </div>
-                )}
-                <span className="text-xs text-gray-700">
-                  {user.displayName || "User"}
-                </span>
-              </div>
+              {user.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt="User"
+                  className="w-9 h-9 rounded-full object-cover border"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-700">
+                  {(user.email && user.email[0].toUpperCase()) || "U"}
+                </div>
+              )}
               <button
                 onClick={() => {
                   handleLogout();
