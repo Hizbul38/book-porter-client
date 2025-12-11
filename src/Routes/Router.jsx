@@ -8,6 +8,11 @@ import Dashboard from "../Pages/Dashboard";
 import HomeLayout from "../Layouts/HomeLayout";
 import BookDetails from "../Pages/BookDetails";
 import AuthLayout from "../Layouts/AuthLayout";
+import DashboardLayout from "../Layouts/DashboardLayout";
+import DashboardHome from "../Pages/Dashboard/DashboardHome";
+import MyOrders from "../Pages/Dashboard/MyOrders";
+import MyProfile from "../Pages/Dashboard/MyProfile";
+import Invoices from "../Pages/Dashboard/Invoices";
 
 const router = createBrowserRouter([
   {
@@ -23,12 +28,6 @@ const router = createBrowserRouter([
       { 
         path: "/dashboard", element: <Dashboard /> 
       },
-      { 
-      path: "/login", element: <Login /> 
-     },
-     { 
-       path: "/register", element: <Register /> 
-     },
      { 
        path: "/all-books/:id", element: <BookDetails></BookDetails>
      },
@@ -40,6 +39,16 @@ const router = createBrowserRouter([
     children: [
       { path: "/login", element: <Login /> },
       { path: "/register", element: <Register /> },
+    ],
+  },
+  {
+    path: "/dashboard",
+    element: <DashboardLayout />,
+    children: [
+      { index: true, element: <DashboardHome /> },
+      { path: "my-orders", element: <MyOrders /> },
+      { path: "profile", element: <MyProfile /> },
+      { path: "invoices", element: <Invoices /> },
     ],
   },
 ]);
