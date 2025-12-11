@@ -152,7 +152,56 @@ const DashboardLayout = () => {
             </NavLink>
           </div>
 
-          {/* Admin section pore add korbo */}
+          {/* Admin Section */}
+          <div>
+            {open && (
+              <p className="px-2 text-[11px] uppercase text-gray-400 mb-2">
+                Admin
+              </p>
+            )}
+
+            <NavLink
+              to="/dashboard/admin/users"
+              className={({ isActive }) =>
+                `flex items-center gap-2 rounded-lg px-2 py-2 ${
+                  isActive
+                    ? "bg-purple-50 text-purple-700"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`
+              }
+            >
+              <span className="text-xs">👥</span>
+              {open && <span>All Users</span>}
+            </NavLink>
+
+            <NavLink
+              to="/dashboard/admin/manage-books"
+              className={({ isActive }) =>
+                `flex items-center gap-2 rounded-lg px-2 py-2 ${
+                  isActive
+                    ? "bg-purple-50 text-purple-700"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`
+              }
+            >
+              <span className="text-xs">📚</span>
+              {open && <span>Manage Books</span>}
+            </NavLink>
+
+            <NavLink
+              to="/dashboard/admin/profile"
+              className={({ isActive }) =>
+                `flex items-center gap-2 rounded-lg px-2 py-2 ${
+                  isActive
+                    ? "bg-purple-50 text-purple-700"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`
+              }
+            >
+              <span className="text-xs">🧑‍💼</span>
+              {open && <span>Admin Profile</span>}
+            </NavLink>
+          </div>
 
         </nav>
 

@@ -17,6 +17,9 @@ import LibrarianAddBook from "../Pages/Dashboard/LibrarianAddBook";
 import LibrarianMyBooks from "../Pages/Dashboard/LibrarianMyBooks";
 import LibrarianEditBook from "../Pages/Dashboard/LibrarianEditBook";
 import LibrarianOrders from "../Pages/Dashboard/LibrarianOrders";
+import AdminProfile from "../Pages/Dashboard/AdminProfile";
+import AdminManageBooks from "../Pages/Dashboard/AdminManageBooks";
+import AdminAllUsers from "../Pages/Dashboard/AdminAllUsers";
 
 const router = createBrowserRouter([
   {
@@ -49,10 +52,16 @@ const router = createBrowserRouter([
     path: "/dashboard",
     element: <DashboardLayout />,
     children: [
+
+      // user
+
       { index: true, element: <DashboardHome /> },
       { path: "my-orders", element: <MyOrders /> },
       { path: "profile", element: <MyProfile /> },
       { path: "invoices", element: <Invoices /> },
+
+      // Librarian
+
       { path: "librarian/add-book", element: <LibrarianAddBook /> },
       { path: "librarian/my-books", element: <LibrarianMyBooks /> },
       {
@@ -60,6 +69,12 @@ const router = createBrowserRouter([
         element: <LibrarianEditBook />,
       },
       { path: "librarian/orders", element: <LibrarianOrders /> },
+      
+      // Admin
+
+      { path: "admin/users", element: <AdminAllUsers /> },
+    { path: "admin/manage-books", element: <AdminManageBooks /> },
+    { path: "admin/profile", element: <AdminProfile /> },
     ],
   },
 ]);
