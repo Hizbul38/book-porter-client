@@ -1,5 +1,7 @@
+// src/Layouts/DashboardLayout.jsx
 import { useContext, useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
+import { ImBook } from "react-icons/im";
 import { AuthContext } from "../Providers/AuthProvider";
 
 const DashboardLayout = () => {
@@ -18,27 +20,18 @@ const DashboardLayout = () => {
           open ? "w-60" : "w-16"
         }`}
       >
-        {/* Top user section */}
+        {/* 🔹 TOP: Logo + collapse button */}
         <div className="h-16 px-3 flex items-center justify-between border-b border-gray-200">
-          <div className="flex items-center gap-2">
-            {user?.photoURL ? (
-              <img
-                src={user.photoURL}
-                alt="User"
-                className="w-9 h-9 rounded-full object-cover border"
-              />
-            ) : (
-              <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-700">
-                {(user?.email && user.email[0].toUpperCase()) || "U"}
-              </div>
-            )}
-            {open && (
-              <span className="text-xs text-gray-700">
-                {/* optional: role badge pore add korbo */}
-                Dashboard
-              </span>
-            )}
-          </div>
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-blue-600 font-semibold text-sm"
+          >
+            <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-blue-50">
+              <ImBook className="text-base" />
+            </span>
+            {open && <span>BookPorter</span>}
+          </Link>
+
           <button
             onClick={() => setOpen(!open)}
             className="text-xs text-gray-500 border rounded px-1 py-0.5"
@@ -47,61 +40,93 @@ const DashboardLayout = () => {
           </button>
         </div>
 
+        {/* (optional) small user chip under logo */}
+        <div className="px-3 py-3 border-b border-gray-200 flex items-center gap-2">
+          {user?.photoURL ? (
+            <img
+              src={user.photoURL}
+              alt="User"
+              className="w-8 h-8 rounded-full object-cover border"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-700">
+              {(user?.email && user.email[0].toUpperCase()) || "U"}
+            </div>
+          )}
+          {open && (
+            <span className="text-[11px] text-gray-600">Dashboard</span>
+          )}
+        </div>
+
         {/* Nav links */}
-        <nav className="flex-1 px-2 py-4 space-y-1 text-sm">
-          <p className={`px-2 text-[11px] uppercase text-gray-400 mb-2 ${!open && "hidden"}`}>
-            User Dashboard
-          </p>
+        <nav className="flex-1 px-2 py-4 space-y-4 text-sm overflow-y-auto">
+          {/* User Section */}
+          <div>
+            {open && (
+              <p className="px-2 text-[11px] uppercase text-gray-400 mb-2">
+                User
+              </p>
+            )}
 
-          <NavLink
-            to="/dashboard"
-            end
-            className={({ isActive }) =>
-              `flex items-center gap-2 rounded-lg px-2 py-2 ${
-                isActive ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
-              }`
-            }
-          >
-            <span className="text-xs">🏠</span>
-            {open && <span>Overview</span>}
-          </NavLink>
+            <NavLink
+              to="/dashboard"
+              end
+              className={({ isActive }) =>
+                `flex items-center gap-2 rounded-lg px-2 py-2 ${
+                  isActive
+                    ? "bg-blue-50 text-blue-600"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`
+              }
+            >
+              <span className="text-xs">🏠</span>
+              {open && <span>Overview</span>}
+            </NavLink>
 
-          <NavLink
-            to="/dashboard/my-orders"
-            className={({ isActive }) =>
-              `flex items-center gap-2 rounded-lg px-2 py-2 ${
-                isActive ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
-              }`
-            }
-          >
-            <span className="text-xs">📚</span>
-            {open && <span>My Orders</span>}
-          </NavLink>
+            <NavLink
+              to="/dashboard/my-orders"
+              className={({ isActive }) =>
+                `flex items-center gap-2 rounded-lg px-2 py-2 ${
+                  isActive
+                    ? "bg-blue-50 text-blue-600"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`
+              }
+            >
+              <span className="text-xs">📚</span>
+              {open && <span>My Orders</span>}
+            </NavLink>
 
-          <NavLink
-            to="/dashboard/invoices"
-            className={({ isActive }) =>
-              `flex items-center gap-2 rounded-lg px-2 py-2 ${
-                isActive ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
-              }`
-            }
-          >
-            <span className="text-xs">🧾</span>
-            {open && <span>Invoices</span>}
-          </NavLink>
+            <NavLink
+              to="/dashboard/invoices"
+              className={({ isActive }) =>
+                `flex items-center gap-2 rounded-lg px-2 py-2 ${
+                  isActive
+                    ? "bg-blue-50 text-blue-600"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`
+              }
+            >
+              <span className="text-xs">🧾</span>
+              {open && <span>Invoices</span>}
+            </NavLink>
 
-          <NavLink
-            to="/dashboard/profile"
-            className={({ isActive }) =>
-              `flex items-center gap-2 rounded-lg px-2 py-2 ${
-                isActive ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
-              }`
-            }
-          >
-            <span className="text-xs">👤</span>
-            {open && <span>My Profile</span>}
-          </NavLink>
+            <NavLink
+              to="/dashboard/profile"
+              className={({ isActive }) =>
+                `flex items-center gap-2 rounded-lg px-2 py-2 ${
+                  isActive
+                    ? "bg-blue-50 text-blue-600"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`
+              }
+            >
+              <span className="text-xs">👤</span>
+              {open && <span>My Profile</span>}
+            </NavLink>
+          </div>
 
+          {/* Librarian Section */}
           <div>
             {open && (
               <p className="px-2 text-[11px] uppercase text-gray-400 mb-2">
@@ -202,7 +227,6 @@ const DashboardLayout = () => {
               {open && <span>Admin Profile</span>}
             </NavLink>
           </div>
-
         </nav>
 
         {/* Bottom logout */}
