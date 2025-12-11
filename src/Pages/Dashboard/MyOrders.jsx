@@ -1,28 +1,27 @@
-const demoOrders = [
-  {
-    id: "ORD-001",
-    bookTitle: "Atomic Habits",
-    orderDate: "2025-01-12",
-    status: "pending",
-    paymentStatus: "unpaid",
-  },
-  {
-    id: "ORD-002",
-    bookTitle: "Clean Code",
-    orderDate: "2025-01-15",
-    status: "shipped",
-    paymentStatus: "paid",
-  },
-];
+import { useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import { OrderContext } from "../../Providers/OrderProvider";
 
 const MyOrders = () => {
+  const { orders, cancelOrder } = useContext(OrderContext);
+  const navigate = useNavigate();
+
+  const handleCancel = (id) => {
+    cancelOrder(id);
+  };
+
+  const handlePayNow = (id) => {
+    // Payment page e niye jabe
+    navigate(`/dashboard/payment/${id}`);
+  };
+
   return (
     <section>
       <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
         My Orders
       </h1>
       <p className="text-sm text-gray-600 mb-4">
-        All the books you have ordered from BookCourier.
+        All the books you have ordered and their current status.
       </p>
 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -38,9 +37,13 @@ const MyOrders = () => {
               </tr>
             </thead>
             <tbody>
-              {demoOrders.map((order) => {
+              {orders.map((order) => {
                 const isPending = order.status === "pending";
                 const isUnpaid = order.paymentStatus === "unpaid";
+                const isCancelled = order.status === "cancelled";
+
+                const showCancelButton = isPending; // requirement অনুযায়ী
+                const showPayNowButton = isPending && isUnpaid;
 
                 return (
                   <tr key={order.id} className="border-t border-gray-100">
@@ -73,23 +76,36 @@ const MyOrders = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right space-x-2">
-                      {isPending && (
-                        <button className="text-xs px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-100">
+                      {/* Cancel button */}
+                      {showCancelButton && (
+                        <button
+                          onClick={() => handleCancel(order.id)}
+                          className="text-xs px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-100"
+                        >
                           Cancel
                         </button>
                       )}
-                      {isPending && isUnpaid && (
-                        <button className="text-xs px-3 py-1 rounded-full bg-gray-900 text-white hover:bg-gray-800">
+
+                      {/* Pay Now button */}
+                      {showPayNowButton && (
+                        <button
+                          onClick={() => handlePayNow(order.id)}
+                          className="text-xs px-3 py-1 rounded-full bg-gray-900 text-white hover:bg-gray-800"
+                        >
                           Pay Now
                         </button>
                       )}
+
+                      {/* Jolok term: if cancelled -> no buttons (already handled by conditions) */}
+                      {isCancelled && null}
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
-          {demoOrders.length === 0 && (
+
+          {orders.length === 0 && (
             <p className="text-sm text-gray-500 px-4 py-6 text-center">
               You have not placed any orders yet.
             </p>

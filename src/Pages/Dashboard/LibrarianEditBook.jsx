@@ -1,35 +1,53 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { useState } from "react";
+import { useContext, useState, useEffect } from "react";
+import { BooksContext } from "../../Providers/BooksProvider";
 
 const LibrarianEditBook = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { books, updateBook } = useContext(BooksContext);
 
-  // MyBooks theke asha book (state diye)
-  const book = location.state?.book || null;
+  // jodi state theke ashe then oi book, otherwise context theke find
+  const fromState = location.state?.book;
+  const fromContext = books.find((b) => b.id === Number(id));
+  const book = fromState || fromContext || null;
 
   const [title, setTitle] = useState(book?.title || "");
   const [author, setAuthor] = useState(book?.author || "");
   const [img, setImg] = useState(book?.img || "");
   const [status, setStatus] = useState(book?.status || "published");
-  const [price, setPrice] = useState(book?.price || "");
+  const [price, setPrice] = useState(book?.price || 0);
+  const [category, setCategory] = useState(book?.category || "");
+  const [description, setDescription] = useState(book?.description || "");
+
+  // jodi later context update hoy, form sync thakar jonno
+  useEffect(() => {
+    if (book) {
+      setTitle(book.title || "");
+      setAuthor(book.author || "");
+      setImg(book.img || "");
+      setStatus(book.status || "published");
+      setPrice(book.price || 0);
+      setCategory(book.category || "");
+      setDescription(book.description || "");
+    }
+  }, [book]);
 
   const handleUpdate = (e) => {
     e.preventDefault();
 
-    const updatedBook = {
-      id,
+    updateBook(id, {
       title,
       author,
       img,
       status,
-      price,
-    };
+      price: Number(price),
+      category,
+      description,
+    });
 
-    // TODO: later send PUT/PATCH request to backend
-    console.log("Updated book (demo):", updatedBook);
-    alert("Book updated (demo). Later this will be saved to database.");
+    alert("Book updated (demo).");
     navigate(-1);
   };
 
@@ -40,8 +58,8 @@ const LibrarianEditBook = () => {
           Edit Book
         </h1>
         <p className="text-sm text-gray-600">
-          No book data found for ID: <span className="font-mono">{id}</span>.{" "}
-          When you connect your backend, this page will fetch the book data by ID.
+          No book data found for ID: <span className="font-mono">{id}</span>.
+          Once you connect backend, this page will fetch by ID.
         </p>
       </section>
     );
@@ -79,8 +97,8 @@ const LibrarianEditBook = () => {
               type="text"
               value={author}
               onChange={(e) => setAuthor(e.target.value)}
+              required
               className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
-              placeholder="Author name (optional demo field)"
             />
           </div>
 
@@ -123,9 +141,32 @@ const LibrarianEditBook = () => {
                 step="0.01"
                 min="0"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
-                placeholder="15.99"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">
+              Category
+            </label>
+            <input
+              type="text"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">
+              Description
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500 resize-none"
+            />
           </div>
 
           <button

@@ -25,27 +25,25 @@ const LibrarianOrders = () => {
   const cancelOrder = (id) => {
     setOrders((prev) =>
       prev.map((order) =>
-        order.id === id
-          ? { ...order, status: "cancelled" } // buttons e pore hide
+        order.id === id && order.status === "pending"
+          ? { ...order, status: "cancelled" }
           : order
       )
     );
   };
 
-  const nextStatus = (current) => {
-    if (current === "pending") return "shipped";
-    if (current === "shipped") return "delivered";
-    return current;
-  };
-
-  const updateStatus = (id) => {
+  const handleStatusChange = (id, newStatus) => {
     setOrders((prev) =>
-      prev.map((order) =>
-        order.id === id
-          ? { ...order, status: nextStatus(order.status) }
-          : order
-      )
+      prev.map((order) => (order.id === id ? { ...order, status: newStatus } : order))
     );
+  };
+
+  const statusOptionsFor = (current) => {
+    if (current === "pending") return ["pending", "shipped"];
+    if (current === "shipped") return ["shipped", "delivered"];
+    if (current === "delivered") return ["delivered"];
+    if (current === "cancelled") return ["cancelled"];
+    return [current];
   };
 
   return (
@@ -73,27 +71,27 @@ const LibrarianOrders = () => {
             <tbody>
               {orders.map((order) => {
                 const isCancelled = order.status === "cancelled";
-                const isDelivered = order.status === "delivered";
 
                 return (
-                  <tr key={order.id} className="border-top border-gray-100">
+                  <tr key={order.id} className="border-t border-gray-100">
                     <td className="px-4 py-3">{order.bookTitle}</td>
                     <td className="px-4 py-3">{order.customerName}</td>
                     <td className="px-4 py-3">{order.orderDate}</td>
-                    <td className="px-4 py-3 capitalize">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[11px] ${
-                          order.status === "pending"
-                            ? "bg-yellow-50 text-yellow-700"
-                            : order.status === "shipped"
-                            ? "bg-blue-50 text-blue-700"
-                            : order.status === "delivered"
-                            ? "bg-green-50 text-green-700"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
+                    <td className="px-4 py-3">
+                      <select
+                        value={order.status}
+                        onChange={(e) =>
+                          handleStatusChange(order.id, e.target.value)
+                        }
+                        disabled={isCancelled || order.status === "delivered"}
+                        className="border border-gray-300 rounded-full px-3 py-1 text-xs outline-none"
                       >
-                        {order.status}
-                      </span>
+                        {statusOptionsFor(order.status).map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-4 py-3 capitalize">
                       <span
@@ -106,9 +104,8 @@ const LibrarianOrders = () => {
                         {order.paymentStatus}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right space-x-2">
-                      {/* Cancel button only if not cancelled / delivered */}
-                      {!isCancelled && !isDelivered && (
+                    <td className="px-4 py-3 text-right">
+                      {!isCancelled && order.status === "pending" && (
                         <button
                           onClick={() => cancelOrder(order.id)}
                           className="text-xs px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-100"
@@ -116,16 +113,7 @@ const LibrarianOrders = () => {
                           Cancel
                         </button>
                       )}
-
-                      {/* Status update: pending -> shipped -> delivered */}
-                      {!isCancelled && !isDelivered && (
-                        <button
-                          onClick={() => updateStatus(order.id)}
-                          className="text-xs px-3 py-1 rounded-full bg-gray-900 text-white hover:bg-gray-800"
-                        >
-                          Mark as {nextStatus(order.status)}
-                        </button>
-                      )}
+                      {/* cancelled hole kono button dekhabo na */}
                     </td>
                   </tr>
                 );

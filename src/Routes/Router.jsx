@@ -20,6 +20,7 @@ import LibrarianOrders from "../Pages/Dashboard/LibrarianOrders";
 import AdminProfile from "../Pages/Dashboard/AdminProfile";
 import AdminManageBooks from "../Pages/Dashboard/AdminManageBooks";
 import AdminAllUsers from "../Pages/Dashboard/AdminAllUsers";
+import Payment from "../Pages/Dashboard/Payment";
 
 const router = createBrowserRouter([
   {
@@ -59,6 +60,7 @@ const router = createBrowserRouter([
       { path: "my-orders", element: <MyOrders /> },
       { path: "profile", element: <MyProfile /> },
       { path: "invoices", element: <Invoices /> },
+      { path: "payment/:id", element: <Payment /> },
 
       // Librarian
 

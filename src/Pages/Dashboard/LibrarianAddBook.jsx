@@ -1,20 +1,27 @@
+import { useContext } from "react";
+import { BooksContext } from "../../Providers/BooksProvider";
+
 const LibrarianAddBook = () => {
+  const { addBook } = useContext(BooksContext);
+
   const handleAddBook = (e) => {
     e.preventDefault();
     const form = e.target;
+
     const newBook = {
       title: form.title.value,
       author: form.author.value,
       img: form.image.value,
-      status: form.status.value,
+      status: form.status.value, // published / unpublished
       price: parseFloat(form.price.value),
+      category: form.category.value || "Others",
+      description: form.description.value || "",
     };
 
-    // TODO: later send to backend (POST /books)
-    console.log("New book (demo):", newBook);
+    addBook(newBook);
 
     form.reset();
-    alert("Book added (demo). Later this will be saved to your database.");
+    alert("Book added (demo). Now it will appear in My Books and All Books if published.");
   };
 
   return (
@@ -23,7 +30,8 @@ const LibrarianAddBook = () => {
         Add New Book
       </h1>
       <p className="text-sm text-gray-600 mb-6">
-        Add a new book to the library catalog. Only published books will be visible on the All Books page.
+        Add a new book to the library catalog. Only published books will be
+        visible on the All Books page.
       </p>
 
       <div className="bg-white border border-gray-200 rounded-xl p-5 max-w-xl">
@@ -98,7 +106,18 @@ const LibrarianAddBook = () => {
             </div>
           </div>
 
-          {/* optional extra fields */}
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">
+              Category (optional)
+            </label>
+            <input
+              type="text"
+              name="category"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+              placeholder="e.g. Programming, Self Help"
+            />
+          </div>
+
           <div>
             <label className="block text-xs text-gray-600 mb-1">
               Short Description (optional)

@@ -1,26 +1,18 @@
-const demoInvoices = [
-  {
-    id: "PAY-001",
-    amount: 12,
-    date: "2025-01-15",
-    bookTitle: "Atomic Habits",
-  },
-  {
-    id: "PAY-002",
-    amount: 18,
-    date: "2025-01-20",
-    bookTitle: "Clean Code",
-  },
-];
+import { useContext } from "react";
+import { OrderContext } from "../../Providers/OrderProvider";
 
 const Invoices = () => {
+  const { orders } = useContext(OrderContext);
+
+  const paidOrders = orders.filter((o) => o.paymentStatus === "paid");
+
   return (
     <section>
       <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
         Invoices
       </h1>
       <p className="text-sm text-gray-600 mb-4">
-        Payments you have made for your book orders.
+        All the payments you have made for your orders.
       </p>
 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -35,21 +27,28 @@ const Invoices = () => {
               </tr>
             </thead>
             <tbody>
-              {demoInvoices.map((invoice) => (
-                <tr key={invoice.id} className="border-t border-gray-100">
-                  <td className="px-4 py-3">{invoice.id}</td>
-                  <td className="px-4 py-3">{invoice.bookTitle}</td>
-                  <td className="px-4 py-3">{invoice.date}</td>
+              {paidOrders.map((order) => (
+                <tr key={order.paymentId || order.id} className="border-t border-gray-100">
+                  <td className="px-4 py-3">
+                    {order.paymentId || "N/A"}
+                  </td>
+                  <td className="px-4 py-3">
+                    {order.bookTitle}
+                  </td>
+                  <td className="px-4 py-3">
+                    {order.paymentDate || "-"}
+                  </td>
                   <td className="px-4 py-3 text-right">
-                    ${invoice.amount.toFixed(2)}
+                    ${order.amount.toFixed(2)}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {demoInvoices.length === 0 && (
+
+          {paidOrders.length === 0 && (
             <p className="text-sm text-gray-500 px-4 py-6 text-center">
-              No invoices found yet.
+              You have not made any payments yet.
             </p>
           )}
         </div>

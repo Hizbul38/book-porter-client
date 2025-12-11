@@ -1,36 +1,9 @@
-import { useState } from "react";
+import { useContext } from "react";
 import { Link } from "react-router-dom";
-
-const initialBooks = [
-  {
-    id: 1,
-    title: "Atomic Habits",
-    img: "https://images.unsplash.com/photo-1512820790803-83ca734da794",
-    status: "published",
-  },
-  {
-    id: 2,
-    title: "Clean Code",
-    img: "https://images.unsplash.com/photo-1524578271613-d550eacf6090",
-    status: "unpublished",
-  },
-];
+import { BooksContext } from "../../Providers/BooksProvider";
 
 const LibrarianMyBooks = () => {
-  const [books, setBooks] = useState(initialBooks);
-
-  const toggleStatus = (id) => {
-    setBooks((prev) =>
-      prev.map((book) =>
-        book.id === id
-          ? {
-              ...book,
-              status: book.status === "published" ? "unpublished" : "published",
-            }
-          : book
-      )
-    );
-  };
+  const { books, toggleBookStatus } = useContext(BooksContext);
 
   return (
     <section>
@@ -38,7 +11,8 @@ const LibrarianMyBooks = () => {
         My Books
       </h1>
       <p className="text-sm text-gray-600 mb-4">
-        All the books you have added. You can edit a book or change its publish status.
+        All the books you have added. You can edit a book or change its publish
+        status. Books cannot be deleted.
       </p>
 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -79,12 +53,10 @@ const LibrarianMyBooks = () => {
                   </td>
                   <td className="px-4 py-3 text-right space-x-2">
                     <button
-                      onClick={() => toggleStatus(book.id)}
+                      onClick={() => toggleBookStatus(book.id)}
                       className="text-xs px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-100"
                     >
-                      {book.status === "published"
-                        ? "Unpublish"
-                        : "Publish"}
+                      {book.status === "published" ? "Unpublish" : "Publish"}
                     </button>
 
                     <Link
