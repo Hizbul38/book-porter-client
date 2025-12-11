@@ -13,6 +13,10 @@ import DashboardHome from "../Pages/Dashboard/DashboardHome";
 import MyOrders from "../Pages/Dashboard/MyOrders";
 import MyProfile from "../Pages/Dashboard/MyProfile";
 import Invoices from "../Pages/Dashboard/Invoices";
+import LibrarianAddBook from "../Pages/Dashboard/LibrarianAddBook";
+import LibrarianMyBooks from "../Pages/Dashboard/LibrarianMyBooks";
+import LibrarianEditBook from "../Pages/Dashboard/LibrarianEditBook";
+import LibrarianOrders from "../Pages/Dashboard/LibrarianOrders";
 
 const router = createBrowserRouter([
   {
@@ -49,6 +53,13 @@ const router = createBrowserRouter([
       { path: "my-orders", element: <MyOrders /> },
       { path: "profile", element: <MyProfile /> },
       { path: "invoices", element: <Invoices /> },
+      { path: "librarian/add-book", element: <LibrarianAddBook /> },
+      { path: "librarian/my-books", element: <LibrarianMyBooks /> },
+      {
+        path: "librarian/books/:id/edit",
+        element: <LibrarianEditBook />,
+      },
+      { path: "librarian/orders", element: <LibrarianOrders /> },
     ],
   },
 ]);

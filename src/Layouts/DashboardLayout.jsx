@@ -102,7 +102,58 @@ const DashboardLayout = () => {
             {open && <span>My Profile</span>}
           </NavLink>
 
-          {/* pore Librarian / Admin section add korbo */}
+          <div>
+            {open && (
+              <p className="px-2 text-[11px] uppercase text-gray-400 mb-2">
+                Librarian
+              </p>
+            )}
+
+            <NavLink
+              to="/dashboard/librarian/add-book"
+              className={({ isActive }) =>
+                `flex items-center gap-2 rounded-lg px-2 py-2 ${
+                  isActive
+                    ? "bg-green-50 text-green-700"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`
+              }
+            >
+              <span className="text-xs">➕</span>
+              {open && <span>Add Book</span>}
+            </NavLink>
+
+            <NavLink
+              to="/dashboard/librarian/my-books"
+              className={({ isActive }) =>
+                `flex items-center gap-2 rounded-lg px-2 py-2 ${
+                  isActive
+                    ? "bg-green-50 text-green-700"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`
+              }
+            >
+              <span className="text-xs">📘</span>
+              {open && <span>My Books</span>}
+            </NavLink>
+
+            <NavLink
+              to="/dashboard/librarian/orders"
+              className={({ isActive }) =>
+                `flex items-center gap-2 rounded-lg px-2 py-2 ${
+                  isActive
+                    ? "bg-green-50 text-green-700"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`
+              }
+            >
+              <span className="text-xs">📦</span>
+              {open && <span>Orders</span>}
+            </NavLink>
+          </div>
+
+          {/* Admin section pore add korbo */}
+
         </nav>
 
         {/* Bottom logout */}
