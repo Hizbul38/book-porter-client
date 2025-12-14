@@ -1,23 +1,56 @@
-import { useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { allBooks } from "../data/books";
+import { OrderContext } from "../Providers/OrderProvider";
 
 const BookDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const bookId = Number(id);
 
-  const book = allBooks.find((b) => b.id === bookId);
+  const { addOrderToList } = useContext(OrderContext);
+
+  const [book, setBook] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [placing, setPlacing] = useState(false);
 
   // demo user – pore real logged in user diye replace korba
   const user = {
     name: "Demo User",
     email: "demo@bookcourier.com",
   };
+
+  useEffect(() => {
+    const loadBook = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`http://localhost:3000/books/${id}`);
+        const data = await res.json();
+
+        if (data?.message) setBook(null);
+        else setBook(data);
+      } catch (error) {
+        console.error("Book details fetch error:", error);
+        setBook(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBook();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <section className="py-10">
+        <div className="max-w-4xl mx-auto px-4">
+          <p className="text-gray-700 mb-4">Loading...</p>
+        </div>
+      </section>
+    );
+  }
 
   if (!book) {
     return (
@@ -35,33 +68,57 @@ const BookDetails = () => {
     );
   }
 
-  const handlePlaceOrder = (e) => {
+  const handlePlaceOrder = async (e) => {
     e.preventDefault();
 
-    // ekhane backend e POST korba pore (order create)
-    // ekhon just demo action
-    console.log("New order:", {
-      bookId: book.id,
-      phone,
-      address,
-      name: user.name,
-      email: user.email,
-      status: "pending",
-      paymentStatus: "unpaid",
-    });
+    if (!phone.trim() || !address.trim()) {
+      alert("Phone and address are required.");
+      return;
+    }
 
-    // reset + close
-    setPhone("");
-    setAddress("");
-    setIsModalOpen(false);
+    try {
+      setPlacing(true);
 
-    alert("Order placed (demo)! In real app this will be saved to database.");
+      const orderPayload = {
+        bookId: book._id,
+        userEmail: user.email,
+        phone,
+        address,
+      };
+
+      const res = await fetch("http://localhost:3000/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(orderPayload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data?.message || "Order failed");
+        return;
+      }
+
+      // ✅ instant MyOrders list update
+      addOrderToList(data);
+
+      setPhone("");
+      setAddress("");
+      setIsModalOpen(false);
+
+      alert("✅ Order placed successfully!");
+      navigate("/dashboard/my-orders");
+    } catch (error) {
+      console.error("Order create error:", error);
+      alert("Something went wrong!");
+    } finally {
+      setPlacing(false);
+    }
   };
 
   return (
     <section className="py-10">
       <div className="max-w-5xl mx-auto px-4">
-        {/* Back link */}
         <button
           onClick={() => navigate(-1)}
           className="mb-4 text-sm text-gray-500 hover:text-gray-800"
@@ -70,7 +127,6 @@ const BookDetails = () => {
         </button>
 
         <div className="grid gap-8 md:grid-cols-2">
-          {/* Book image */}
           <div className="w-full h-72 md:h-96 bg-gray-100 rounded-xl overflow-hidden">
             <img
               src={book.img}
@@ -79,7 +135,6 @@ const BookDetails = () => {
             />
           </div>
 
-          {/* Book info */}
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
               {book.title}
@@ -87,11 +142,11 @@ const BookDetails = () => {
             <p className="mt-1 text-sm text-gray-600">by {book.author}</p>
 
             <p className="mt-3 text-xs inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-700">
-              {book.category}
+              {book.category || "Others"}
             </p>
 
             <p className="mt-4 text-sm text-gray-700 leading-relaxed">
-              {book.description}
+              {book.description || "No description available."}
             </p>
 
             <div className="mt-6 flex items-center justify-between">
@@ -100,7 +155,7 @@ const BookDetails = () => {
                   Price
                 </p>
                 <p className="text-xl font-semibold text-gray-900">
-                  ${book.price.toFixed(2)}
+                  ${Number(book.price).toFixed(2)}
                 </p>
               </div>
 
@@ -112,7 +167,6 @@ const BookDetails = () => {
               </button>
             </div>
 
-            {/* Optional extra info section */}
             <div className="mt-6 space-y-2 text-xs text-gray-500">
               <p>Delivery: 2-5 business days (demo)</p>
               <p>Return Policy: 7 days from delivery (demo)</p>
@@ -120,7 +174,6 @@ const BookDetails = () => {
           </div>
         </div>
 
-        {/* Modal */}
         {isModalOpen && (
           <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40">
             <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6 relative">
@@ -193,9 +246,14 @@ const BookDetails = () => {
 
                 <button
                   type="submit"
-                  className="w-full mt-2 px-4 py-2.5 rounded-full bg-gray-900 text-white text-sm font-medium hover:bg-gray-800"
+                  disabled={placing}
+                  className={`w-full mt-2 px-4 py-2.5 rounded-full text-white text-sm font-medium ${
+                    placing
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-gray-900 hover:bg-gray-800"
+                  }`}
                 >
-                  Place Order
+                  {placing ? "Placing..." : "Place Order"}
                 </button>
               </form>
             </div>

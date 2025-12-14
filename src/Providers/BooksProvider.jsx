@@ -1,60 +1,91 @@
 // src/Providers/BooksProvider.jsx
-import { createContext, useState } from "react";
+import { createContext, useEffect, useState } from "react";
 
 export const BooksContext = createContext(null);
 
-// Demo initial books – pore backend theke load korba
-const initialBooks = [
-  {
-    id: 1,
-    title: "Atomic Habits",
-    author: "James Clear",
-    category: "Self Help",
-    price: 12,
-    img: "https://images.unsplash.com/photo-1512820790803-83ca734da794",
-    status: "published", // published | unpublished
-  },
-  {
-    id: 2,
-    title: "Clean Code",
-    author: "Robert C. Martin",
-    category: "Programming",
-    price: 18,
-    img: "https://images.unsplash.com/photo-1524578271613-d550eacf6090",
-    status: "published",
-  },
-  {
-    id: 3,
-    title: "Deep Work",
-    author: "Cal Newport",
-    category: "Productivity",
-    price: 15,
-    img: "https://images.unsplash.com/photo-1544717302-de2939b7ef71",
-    status: "unpublished",
-  },
-];
-
 const BooksProvider = ({ children }) => {
-  const [books, setBooks] = useState(initialBooks);
+  const [books, setBooks] = useState([]);
 
-  const addBook = (bookData) => {
-    const newBook = {
-      ...bookData,
-      id: Date.now(), // demo id
-    };
-    setBooks((prev) => [...prev, newBook]);
+  // ✅ DB theke all books load (published + missing status included)
+  const fetchBooks = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/books?status=all");
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("fetchBooks failed:", data);
+        return;
+      }
+
+      setBooks(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("fetchBooks error:", err);
+    }
   };
 
+  useEffect(() => {
+    fetchBooks();
+  }, []);
+
+  // ✅ add book to DB + instantly update state
+  const addBook = async (bookData) => {
+    try {
+      const res = await fetch("http://localhost:3000/books", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(bookData),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data?.message || "Failed to add book");
+        return null;
+      }
+
+      // ✅ latest + all books instantly show
+      setBooks((prev) => [data, ...prev]);
+      return data;
+    } catch (err) {
+      console.error("addBook error:", err);
+      alert("Something went wrong!");
+      return null;
+    }
+  };
+
+  // ✅ local update (UI) — backend update route na thakle eta demo hishebe thakbe
   const updateBook = (id, updatedFields) => {
     setBooks((prev) =>
-      prev.map((b) => (b.id === Number(id) ? { ...b, ...updatedFields } : b))
+      prev.map((b) => (String(b._id) === String(id) ? { ...b, ...updatedFields } : b))
     );
   };
 
+  // ✅ local delete (UI) — backend delete already ache
+  const deleteBook = async (bookId) => {
+    try {
+      const res = await fetch(`http://localhost:3000/books/${bookId}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data?.message || "Failed to delete book");
+        return;
+      }
+
+      setBooks((prev) => prev.filter((b) => String(b._id) !== String(bookId)));
+    } catch (err) {
+      console.error("deleteBook error:", err);
+      alert("Something went wrong!");
+    }
+  };
+
+  // ✅ local toggle (UI)
   const toggleBookStatus = (id) => {
     setBooks((prev) =>
       prev.map((b) =>
-        b.id === id
+        String(b._id) === String(id)
           ? {
               ...b,
               status: b.status === "published" ? "unpublished" : "published",
@@ -66,8 +97,10 @@ const BooksProvider = ({ children }) => {
 
   const value = {
     books,
+    fetchBooks,
     addBook,
     updateBook,
+    deleteBook,
     toggleBookStatus,
   };
 

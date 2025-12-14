@@ -1,52 +1,32 @@
-import { useState } from "react";
-
-const initialBooks = [
-  {
-    id: 1,
-    title: "Atomic Habits",
-    author: "James Clear",
-    status: "published",
-    price: 12,
-  },
-  {
-    id: 2,
-    title: "Clean Code",
-    author: "Robert C. Martin",
-    status: "unpublished",
-    price: 18,
-  },
-  {
-    id: 3,
-    title: "Deep Work",
-    author: "Cal Newport",
-    status: "published",
-    price: 15,
-  },
-];
+// src/Pages/Dashboard/AdminManageBooks.jsx
+import { useContext } from "react";
+import { BooksContext } from "../../Providers/BooksProvider";
+import { OrderContext } from "../../Providers/OrderProvider";
 
 const AdminManageBooks = () => {
-  const [books, setBooks] = useState(initialBooks);
+  const { books, toggleBookStatus, deleteBook } =
+    useContext(BooksContext) || {};
+  const { deleteOrdersByBook } = useContext(OrderContext) || {};
 
-  const toggleStatus = (id) => {
-    setBooks((prev) =>
-      prev.map((book) =>
-        book.id === id
-          ? {
-              ...book,
-              status: book.status === "published" ? "unpublished" : "published",
-            }
-          : book
-      )
-    );
+  if (!books) {
+    return null;
+  }
 
-    // TODO: backend call for publish/unpublish
-    console.log("Toggled book status (demo) =>", id);
+  const handleToggleStatus = (id) => {
+    toggleBookStatus(id);
+    // TODO: backend e PATCH/PUT call korba
   };
 
-  const deleteBook = (id) => {
-    // TODO: backend call: delete book + delete all orders for that book
-    console.log("Delete book and its orders (demo) =>", id);
-    setBooks((prev) => prev.filter((book) => book.id !== id));
+  const handleDelete = (bookId) => {
+    // TODO: backend e DELETE /books/:id + related orders delete korba
+
+    // front-end demo:
+    if (deleteOrdersByBook) {
+      deleteOrdersByBook(bookId);
+    }
+    if (deleteBook) {
+      deleteBook(bookId);
+    }
   };
 
   return (
@@ -55,7 +35,8 @@ const AdminManageBooks = () => {
         Manage Books
       </h1>
       <p className="text-sm text-gray-600 mb-4">
-        All books added by librarians. You can publish, unpublish or delete books.
+        All books added by librarians. You can publish, unpublish or delete
+        books. Deleting a book will also delete all related orders.
       </p>
 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -74,7 +55,9 @@ const AdminManageBooks = () => {
               {books.map((book) => (
                 <tr key={book.id} className="border-t border-gray-100">
                   <td className="px-4 py-3">{book.title}</td>
-                  <td className="px-4 py-3 text-gray-600">{book.author}</td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {book.author || "-"}
+                  </td>
                   <td className="px-4 py-3">
                     <span
                       className={`px-2 py-0.5 rounded-full text-[11px] capitalize ${
@@ -87,11 +70,11 @@ const AdminManageBooks = () => {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    ${book.price.toFixed(2)}
+                    ${Number(book.price || 0).toFixed(2)}
                   </td>
                   <td className="px-4 py-3 text-right space-x-2">
                     <button
-                      onClick={() => toggleStatus(book.id)}
+                      onClick={() => handleToggleStatus(book.id)}
                       className="text-xs px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-100"
                     >
                       {book.status === "published"
@@ -99,7 +82,7 @@ const AdminManageBooks = () => {
                         : "Publish"}
                     </button>
                     <button
-                      onClick={() => deleteBook(book.id)}
+                      onClick={() => handleDelete(book.id)}
                       className="text-xs px-3 py-1 rounded-full bg-red-500 text-white hover:bg-red-600"
                     >
                       Delete

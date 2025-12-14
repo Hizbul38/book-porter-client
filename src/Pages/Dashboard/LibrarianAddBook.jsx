@@ -4,7 +4,7 @@ import { BooksContext } from "../../Providers/BooksProvider";
 const LibrarianAddBook = () => {
   const { addBook } = useContext(BooksContext);
 
-  const handleAddBook = (e) => {
+  const handleAddBook = async (e) => {
     e.preventDefault();
     const form = e.target;
 
@@ -18,10 +18,12 @@ const LibrarianAddBook = () => {
       description: form.description.value || "",
     };
 
-    addBook(newBook);
+    const saved = await addBook(newBook);
 
-    form.reset();
-    alert("Book added (demo). Now it will appear in My Books and All Books if published.");
+    if (saved) {
+      form.reset();
+      alert("✅ Book added successfully!");
+    }
   };
 
   return (
@@ -37,9 +39,7 @@ const LibrarianAddBook = () => {
       <div className="bg-white border border-gray-200 rounded-xl p-5 max-w-xl">
         <form onSubmit={handleAddBook} className="space-y-4 text-sm">
           <div>
-            <label className="block text-xs text-gray-600 mb-1">
-              Book Name
-            </label>
+            <label className="block text-xs text-gray-600 mb-1">Book Name</label>
             <input
               type="text"
               name="title"
@@ -50,9 +50,7 @@ const LibrarianAddBook = () => {
           </div>
 
           <div>
-            <label className="block text-xs text-gray-600 mb-1">
-              Author
-            </label>
+            <label className="block text-xs text-gray-600 mb-1">Author</label>
             <input
               type="text"
               name="author"
@@ -77,9 +75,7 @@ const LibrarianAddBook = () => {
 
           <div className="grid gap-4 grid-cols-2">
             <div>
-              <label className="block text-xs text-gray-600 mb-1">
-                Status
-              </label>
+              <label className="block text-xs text-gray-600 mb-1">Status</label>
               <select
                 name="status"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"

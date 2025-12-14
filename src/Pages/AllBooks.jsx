@@ -1,16 +1,41 @@
-import { useState, useMemo, useContext } from "react";
-import { BooksContext } from "../Providers/BooksProvider";
+// src/Pages/AllBooks.jsx
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
-const categories = ["All", "Self Help", "Programming", "Productivity", "Finance"];
+const categories = ["All", "Self Help", "Programming", "Productivity", "Finance", "Others"];
 
 const AllBooks = () => {
-  const { books } = useContext(BooksContext);
+  const [books, setBooks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [sortBy, setSortBy] = useState("none");
 
+  // ✅ MongoDB theke 20 ta published book load
+  useEffect(() => {
+    const loadBooks = async () => {
+      try {
+        setLoading(true);
+
+        // backend: /books?limit=20&status=published
+        const res = await fetch(
+          "http://localhost:3000/books?limit=20&status=published"
+        );
+        const data = await res.json();
+        setBooks(data);
+      } catch (error) {
+        console.error("All books fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBooks();
+  }, []);
+
   const filteredBooks = useMemo(() => {
-    let visibleBooks = books.filter((b) => b.status === "published"); // 🔥 only published
+    let visibleBooks = [...books];
 
     // search by title
     if (search.trim()) {
@@ -22,19 +47,29 @@ const AllBooks = () => {
     // filter by category
     if (selectedCategory !== "All") {
       visibleBooks = visibleBooks.filter(
-        (book) => book.category === selectedCategory
+        (book) => (book.category || "Others") === selectedCategory
       );
     }
 
     // sort by price
     if (sortBy === "price-asc") {
-      visibleBooks.sort((a, b) => a.price - b.price);
+      visibleBooks.sort((a, b) => Number(a.price) - Number(b.price));
     } else if (sortBy === "price-desc") {
-      visibleBooks.sort((a, b) => b.price - a.price);
+      visibleBooks.sort((a, b) => Number(b.price) - Number(a.price));
     }
 
     return visibleBooks;
   }, [books, search, selectedCategory, sortBy]);
+
+  if (loading) {
+    return (
+      <section className="py-10">
+        <div className="max-w-6xl mx-auto px-4">
+          <p className="text-sm text-gray-600">Loading books...</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-10">
@@ -45,7 +80,7 @@ const AllBooks = () => {
             All Books
           </h1>
           <p className="text-sm md:text-base text-gray-600 mt-1">
-            Browse and filter all available books from BookPorter.
+            Browse all the books added by our librarians.
           </p>
         </div>
 
@@ -96,9 +131,10 @@ const AllBooks = () => {
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {filteredBooks.map((book) => (
-              <article
-                key={book.id}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col"
+              <Link
+                to={`/all-books/${book._id}`}
+                key={book._id}
+                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col hover:shadow-md transition-shadow"
               >
                 <div className="h-40 bg-gray-200">
                   <img
@@ -115,19 +151,19 @@ const AllBooks = () => {
                     {book.author}
                   </p>
                   <p className="text-[11px] text-gray-500 mb-3">
-                    Category: {book.category}
+                    Category: {book.category || "Others"}
                   </p>
 
                   <div className="mt-auto flex items-center justify-between">
                     <span className="text-sm font-semibold text-gray-900">
-                      ${book.price.toFixed(2)}
+                      ${Number(book.price).toFixed(2)}
                     </span>
-                    <button className="text-xs px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-100">
+                    <span className="text-[11px] px-3 py-1 rounded-full border border-gray-300">
                       View Details
-                    </button>
+                    </span>
                   </div>
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
         )}

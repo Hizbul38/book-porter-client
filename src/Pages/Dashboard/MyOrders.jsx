@@ -11,7 +11,6 @@ const MyOrders = () => {
   };
 
   const handlePayNow = (id) => {
-    // Payment page e niye jabe
     navigate(`/dashboard/payment/${id}`);
   };
 
@@ -36,19 +35,25 @@ const MyOrders = () => {
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
+
             <tbody>
               {orders.map((order) => {
                 const isPending = order.status === "pending";
                 const isUnpaid = order.paymentStatus === "unpaid";
-                const isCancelled = order.status === "cancelled";
 
-                const showCancelButton = isPending; // requirement অনুযায়ী
+                const showCancelButton = isPending;
                 const showPayNowButton = isPending && isUnpaid;
 
                 return (
-                  <tr key={order.id} className="border-t border-gray-100">
+                  <tr key={order._id} className="border-t border-gray-100">
                     <td className="px-4 py-3">{order.bookTitle}</td>
-                    <td className="px-4 py-3">{order.orderDate}</td>
+
+                    <td className="px-4 py-3">
+                      {order.createdAt
+                        ? new Date(order.createdAt).toLocaleString()
+                        : "—"}
+                    </td>
+
                     <td className="px-4 py-3 capitalize">
                       <span
                         className={`px-2 py-0.5 rounded-full text-[11px] ${
@@ -64,6 +69,7 @@ const MyOrders = () => {
                         {order.status}
                       </span>
                     </td>
+
                     <td className="px-4 py-3 capitalize">
                       <span
                         className={`px-2 py-0.5 rounded-full text-[11px] ${
@@ -75,29 +81,25 @@ const MyOrders = () => {
                         {order.paymentStatus}
                       </span>
                     </td>
+
                     <td className="px-4 py-3 text-right space-x-2">
-                      {/* Cancel button */}
                       {showCancelButton && (
                         <button
-                          onClick={() => handleCancel(order.id)}
+                          onClick={() => handleCancel(order._id)}
                           className="text-xs px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-100"
                         >
                           Cancel
                         </button>
                       )}
 
-                      {/* Pay Now button */}
                       {showPayNowButton && (
                         <button
-                          onClick={() => handlePayNow(order.id)}
+                          onClick={() => handlePayNow(order._id)}
                           className="text-xs px-3 py-1 rounded-full bg-gray-900 text-white hover:bg-gray-800"
                         >
                           Pay Now
                         </button>
                       )}
-
-                      {/* Jolok term: if cancelled -> no buttons (already handled by conditions) */}
-                      {isCancelled && null}
                     </td>
                   </tr>
                 );

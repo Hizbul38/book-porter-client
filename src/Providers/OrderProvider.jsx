@@ -1,64 +1,90 @@
-// src/Providers/OrderProvider.jsx
-import { createContext, useState } from "react";
+import { createContext, useEffect, useState } from "react";
 
 export const OrderContext = createContext(null);
 
-// demo initial orders – pore API theke asbe
-const initialOrders = [
-  {
-    id: "ORD-001",
-    bookTitle: "Atomic Habits",
-    orderDate: "2025-01-12",
-    status: "pending",      // pending | shipped | delivered | cancelled
-    paymentStatus: "unpaid",// unpaid | paid
-    amount: 12,
-    paymentId: null,
-    paymentDate: null,
-  },
-  {
-    id: "ORD-002",
-    bookTitle: "Clean Code",
-    orderDate: "2025-01-15",
-    status: "shipped",
-    paymentStatus: "paid",
-    amount: 18,
-    paymentId: "PAY-1001",
-    paymentDate: "2025-01-20",
-  },
-];
-
 const OrderProvider = ({ children }) => {
-  const [orders, setOrders] = useState(initialOrders);
+  const [orders, setOrders] = useState([]);
 
-  const cancelOrder = (id) => {
-    setOrders((prev) =>
-      prev.map((order) =>
-        order.id === id && order.status === "pending"
-          ? { ...order, status: "cancelled" }
-          : order
-      )
-    );
+  // demo user – pore real logged in user diye replace korba
+  const user = {
+    email: "demo@bookcourier.com",
   };
 
-  const markOrderPaid = (id, paymentId, paymentDate) => {
-    setOrders((prev) =>
-      prev.map((order) =>
-        order.id === id
-          ? {
-              ...order,
-              paymentStatus: "paid",
-              paymentId,
-              paymentDate,
-            }
-          : order
-      )
-    );
+  // ✅ fetch orders from DB
+  const fetchOrders = async () => {
+    try {
+      const res = await fetch(`http://localhost:3000/orders?email=${user.email}`);
+      const data = await res.json();
+      if (res.ok) setOrders(data);
+    } catch (err) {
+      console.error("fetchOrders error:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  // ✅ instant UI update after placing order
+  const addOrderToList = (newOrder) => {
+    setOrders((prev) => [newOrder, ...prev]);
+  };
+
+  // ✅ cancel order in DB + update UI
+  const cancelOrder = async (id) => {
+    try {
+      const res = await fetch(`http://localhost:3000/orders/${id}/cancel`, {
+        method: "PATCH",
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data?.message || "Cancel failed");
+        return;
+      }
+
+      setOrders((prev) => prev.map((o) => (o._id === id ? data : o)));
+    } catch (err) {
+      console.error("cancelOrder error:", err);
+      alert("Something went wrong!");
+    }
+  };
+
+  // ✅ pay order in DB + update UI (demo)
+  const markOrderPaid = async (id) => {
+    try {
+      const res = await fetch(`http://localhost:3000/orders/${id}/pay`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ paymentId: `PAY-${Date.now()}` }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data?.message || "Payment failed");
+        return;
+      }
+
+      setOrders((prev) => prev.map((o) => (o._id === id ? data : o)));
+    } catch (err) {
+      console.error("markOrderPaid error:", err);
+      alert("Something went wrong!");
+    }
+  };
+
+  // 🔥 book delete hole oi bookId er sob order delete (local state)
+  const deleteOrdersByBook = (bookId) => {
+    setOrders((prev) => prev.filter((order) => String(order.bookId) !== String(bookId)));
   };
 
   const value = {
     orders,
+    fetchOrders,
+    addOrderToList,
     cancelOrder,
     markOrderPaid,
+    deleteOrdersByBook,
   };
 
   return (
