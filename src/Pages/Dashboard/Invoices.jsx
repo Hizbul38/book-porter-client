@@ -1,19 +1,37 @@
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import { OrderContext } from "../../Providers/OrderProvider";
 
 const Invoices = () => {
-  const { orders } = useContext(OrderContext);
+  const { user } = useContext(OrderContext);
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const paidOrders = orders.filter((o) => o.paymentStatus === "paid");
+  useEffect(() => {
+    const loadInvoices = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(
+          `http://localhost:3000/invoices?email=${encodeURIComponent(user.email)}`
+        );
+        const data = await res.json();
+        if (res.ok) setInvoices(Array.isArray(data) ? data : []);
+      } catch {
+        setInvoices([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadInvoices();
+  }, [user.email]);
+
+  if (loading) return <p className="text-sm text-gray-600">Loading...</p>;
 
   return (
     <section>
       <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
         Invoices
       </h1>
-      <p className="text-sm text-gray-600 mb-4">
-        All the payments you have made for your orders.
-      </p>
 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
@@ -21,34 +39,28 @@ const Invoices = () => {
             <thead className="bg-gray-50 text-xs uppercase text-gray-500">
               <tr>
                 <th className="px-4 py-3 text-left">Payment ID</th>
-                <th className="px-4 py-3 text-left">Book</th>
+                <th className="px-4 py-3 text-left">Amount</th>
                 <th className="px-4 py-3 text-left">Date</th>
-                <th className="px-4 py-3 text-right">Amount</th>
+                <th className="px-4 py-3 text-left">Book</th>
               </tr>
             </thead>
             <tbody>
-              {paidOrders.map((order) => (
-                <tr key={order.paymentId || order.id} className="border-t border-gray-100">
+              {invoices.map((inv) => (
+                <tr key={inv._id} className="border-t border-gray-100">
+                  <td className="px-4 py-3">{inv.paymentId}</td>
+                  <td className="px-4 py-3">${Number(inv.amount).toFixed(2)}</td>
                   <td className="px-4 py-3">
-                    {order.paymentId || "N/A"}
+                    {inv.paymentDate ? new Date(inv.paymentDate).toLocaleString() : "—"}
                   </td>
-                  <td className="px-4 py-3">
-                    {order.bookTitle}
-                  </td>
-                  <td className="px-4 py-3">
-                    {order.paymentDate || "-"}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    ${order.amount.toFixed(2)}
-                  </td>
+                  <td className="px-4 py-3">{inv.bookTitle || "—"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          {paidOrders.length === 0 && (
+          {invoices.length === 0 && (
             <p className="text-sm text-gray-500 px-4 py-6 text-center">
-              You have not made any payments yet.
+              No invoices found.
             </p>
           )}
         </div>

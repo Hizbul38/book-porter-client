@@ -6,14 +6,6 @@ const MyOrders = () => {
   const { orders, cancelOrder } = useContext(OrderContext);
   const navigate = useNavigate();
 
-  const handleCancel = (id) => {
-    cancelOrder(id);
-  };
-
-  const handlePayNow = (id) => {
-    navigate(`/dashboard/payment/${id}`);
-  };
-
   return (
     <section>
       <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
@@ -40,10 +32,12 @@ const MyOrders = () => {
               {orders.map((order) => {
                 const isPending = order.status === "pending";
                 const isUnpaid = order.paymentStatus === "unpaid";
+                const isCancelled = order.status === "cancelled";
 
-                const showCancelButton = isPending;
-                const showPayNowButton = isPending && isUnpaid;
+                const showCancelButton = isPending; // only pending
+                const showPayNowButton = isPending && isUnpaid; // only pending+unpaid
 
+                // cancel করলে সব buttons hide: conditions already handle it
                 return (
                   <tr key={order._id} className="border-t border-gray-100">
                     <td className="px-4 py-3">{order.bookTitle}</td>
@@ -85,7 +79,7 @@ const MyOrders = () => {
                     <td className="px-4 py-3 text-right space-x-2">
                       {showCancelButton && (
                         <button
-                          onClick={() => handleCancel(order._id)}
+                          onClick={() => cancelOrder(order._id)}
                           className="text-xs px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-100"
                         >
                           Cancel
@@ -94,12 +88,14 @@ const MyOrders = () => {
 
                       {showPayNowButton && (
                         <button
-                          onClick={() => handlePayNow(order._id)}
+                          onClick={() => navigate(`/dashboard/payment/${order._id}`)}
                           className="text-xs px-3 py-1 rounded-full bg-gray-900 text-white hover:bg-gray-800"
                         >
                           Pay Now
                         </button>
                       )}
+
+                      {isCancelled && null}
                     </td>
                   </tr>
                 );

@@ -1,117 +1,85 @@
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { OrderContext } from "../../Providers/OrderProvider";
 
 const Payment = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { orders, markOrderPaid } = useContext(OrderContext);
+  const { markOrderPaid } = useContext(OrderContext);
 
-  const order = orders.find((o) => o.id === id);
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [paying, setPaying] = useState(false);
 
-  if (!order) {
-    return (
-      <section>
-        <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-          Payment
-        </h1>
-        <p className="text-sm text-gray-600">
-          No order found for ID: <span className="font-mono">{id}</span>.
-        </p>
-      </section>
-    );
-  }
+  useEffect(() => {
+    const loadOrder = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`http://localhost:3000/orders/${id}`);
+        const data = await res.json();
+        if (res.ok) setOrder(data);
+        else setOrder(null);
+      } catch {
+        setOrder(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleConfirmPayment = (e) => {
-    e.preventDefault();
+    loadOrder();
+  }, [id]);
 
-    // fake payment id & date
-    const paymentId = `PAY-${Date.now()}`;
-    const today = new Date().toISOString().slice(0, 10);
+  const handlePay = async () => {
+    if (!order) return;
+    setPaying(true);
 
-    // update context
-    markOrderPaid(order.id, paymentId, today);
+    const updated = await markOrderPaid(order._id);
 
-    alert("Payment successful (demo). Order marked as paid.");
-    navigate("/dashboard/my-orders");
+    setPaying(false);
+
+    if (updated) {
+      alert("✅ Payment successful!");
+      navigate("/dashboard/my-orders");
+    }
   };
+
+  if (loading) return <p className="text-sm text-gray-600">Loading...</p>;
+  if (!order) return <p className="text-sm text-gray-600">Order not found.</p>;
+
+  const alreadyPaid = order.paymentStatus === "paid";
+  const cancelled = order.status === "cancelled";
 
   return (
     <section>
       <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-        Pay for Order
+        Payment
       </h1>
-      <p className="text-sm text-gray-600 mb-6">
-        Complete your payment for this order. In real app this page will be
-        connected to your payment gateway.
-      </p>
 
-      <div className="bg-white border border-gray-200 rounded-xl p-5 max-w-lg">
-        <div className="mb-4 text-sm">
-          <p className="mb-1">
-            <span className="font-medium text-gray-800">Order ID:</span>{" "}
-            <span className="font-mono">{order.id}</span>
-          </p>
-          <p className="mb-1">
-            <span className="font-medium text-gray-800">Book:</span>{" "}
-            {order.bookTitle}
-          </p>
-          <p className="mb-1">
-            <span className="font-medium text-gray-800">Order Date:</span>{" "}
-            {order.orderDate}
-          </p>
-          <p>
-            <span className="font-medium text-gray-800">Amount:</span>{" "}
-            ${order.amount.toFixed(2)}
-          </p>
-        </div>
+      <div className="bg-white border border-gray-200 rounded-xl p-5 max-w-xl">
+        <p className="text-sm text-gray-700">
+          <span className="font-semibold">Book:</span> {order.bookTitle}
+        </p>
+        <p className="text-sm text-gray-700 mt-1">
+          <span className="font-semibold">Amount:</span> ${Number(order.amount).toFixed(2)}
+        </p>
+        <p className="text-sm text-gray-700 mt-1">
+          <span className="font-semibold">Status:</span> {order.status}
+        </p>
+        <p className="text-sm text-gray-700 mt-1">
+          <span className="font-semibold">Payment:</span> {order.paymentStatus}
+        </p>
 
-        <form onSubmit={handleConfirmPayment} className="space-y-4 text-sm">
-          {/* demo payment form fields – optional */}
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">
-              Card Number (demo)
-            </label>
-            <input
-              type="text"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
-              placeholder="0000 0000 0000 0000"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">
-                Expiry (MM/YY)
-              </label>
-              <input
-                type="text"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
-                placeholder="12/30"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">
-                CVC
-              </label>
-              <input
-                type="text"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
-                placeholder="123"
-                required
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="mt-2 px-4 py-2.5 rounded-full bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 w-full"
-          >
-            Confirm Payment
-          </button>
-        </form>
+        <button
+          onClick={handlePay}
+          disabled={paying || alreadyPaid || cancelled}
+          className={`mt-4 px-4 py-2 rounded-full text-sm font-medium text-white ${
+            paying || alreadyPaid || cancelled
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-gray-900 hover:bg-gray-800"
+          }`}
+        >
+          {alreadyPaid ? "Paid" : cancelled ? "Cancelled" : paying ? "Paying..." : "Pay Now"}
+        </button>
       </div>
     </section>
   );

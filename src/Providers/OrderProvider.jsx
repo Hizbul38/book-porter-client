@@ -10,12 +10,16 @@ const OrderProvider = ({ children }) => {
     email: "demo@bookcourier.com",
   };
 
-  // ✅ fetch orders from DB
   const fetchOrders = async () => {
     try {
-      const res = await fetch(`http://localhost:3000/orders?email=${user.email}`);
+      const res = await fetch(
+        `http://localhost:3000/orders?email=${encodeURIComponent(user.email)}`
+      );
       const data = await res.json();
-      if (res.ok) setOrders(data);
+
+      if (!res.ok) return;
+
+      setOrders(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("fetchOrders error:", err);
     }
@@ -23,14 +27,14 @@ const OrderProvider = ({ children }) => {
 
   useEffect(() => {
     fetchOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ instant UI update after placing order
   const addOrderToList = (newOrder) => {
+    if (!newOrder?._id) return;
     setOrders((prev) => [newOrder, ...prev]);
   };
 
-  // ✅ cancel order in DB + update UI
   const cancelOrder = async (id) => {
     try {
       const res = await fetch(`http://localhost:3000/orders/${id}/cancel`, {
@@ -50,7 +54,6 @@ const OrderProvider = ({ children }) => {
     }
   };
 
-  // ✅ pay order in DB + update UI (demo)
   const markOrderPaid = async (id) => {
     try {
       const res = await fetch(`http://localhost:3000/orders/${id}/pay`, {
@@ -63,19 +66,16 @@ const OrderProvider = ({ children }) => {
 
       if (!res.ok) {
         alert(data?.message || "Payment failed");
-        return;
+        return null;
       }
 
       setOrders((prev) => prev.map((o) => (o._id === id ? data : o)));
+      return data;
     } catch (err) {
       console.error("markOrderPaid error:", err);
       alert("Something went wrong!");
+      return null;
     }
-  };
-
-  // 🔥 book delete hole oi bookId er sob order delete (local state)
-  const deleteOrdersByBook = (bookId) => {
-    setOrders((prev) => prev.filter((order) => String(order.bookId) !== String(bookId)));
   };
 
   const value = {
@@ -84,12 +84,10 @@ const OrderProvider = ({ children }) => {
     addOrderToList,
     cancelOrder,
     markOrderPaid,
-    deleteOrdersByBook,
+    user, // payment/invoices/profile page e email lagbe
   };
 
-  return (
-    <OrderContext.Provider value={value}>{children}</OrderContext.Provider>
-  );
+  return <OrderContext.Provider value={value}>{children}</OrderContext.Provider>;
 };
 
 export default OrderProvider;
