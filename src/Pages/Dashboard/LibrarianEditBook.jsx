@@ -1,179 +1,85 @@
-import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { useContext, useState, useEffect } from "react";
+import { useContext, useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { BooksContext } from "../../Providers/BooksProvider";
 
-const LibrarianEditBook = () => {
+const EditBook = () => {
   const { id } = useParams();
-  const location = useLocation();
   const navigate = useNavigate();
-  const { books, updateBook } = useContext(BooksContext);
+  const { updateBook } = useContext(BooksContext);
 
-  // jodi state theke ashe then oi book, otherwise context theke find
-  const fromState = location.state?.book;
-  const fromContext = books.find((b) => b.id === Number(id));
-  const book = fromState || fromContext || null;
+  const [book, setBook] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const [title, setTitle] = useState(book?.title || "");
-  const [author, setAuthor] = useState(book?.author || "");
-  const [img, setImg] = useState(book?.img || "");
-  const [status, setStatus] = useState(book?.status || "published");
-  const [price, setPrice] = useState(book?.price || 0);
-  const [category, setCategory] = useState(book?.category || "");
-  const [description, setDescription] = useState(book?.description || "");
-
-  // jodi later context update hoy, form sync thakar jonno
   useEffect(() => {
-    if (book) {
-      setTitle(book.title || "");
-      setAuthor(book.author || "");
-      setImg(book.img || "");
-      setStatus(book.status || "published");
-      setPrice(book.price || 0);
-      setCategory(book.category || "");
-      setDescription(book.description || "");
-    }
-  }, [book]);
+    const load = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`http://localhost:3000/books/${id}`);
+        const data = await res.json();
+        if (res.ok) setBook(data);
+        else setBook(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [id]);
 
-  const handleUpdate = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    const form = e.target;
 
-    updateBook(id, {
-      title,
-      author,
-      img,
-      status,
-      price: Number(price),
-      category,
-      description,
-    });
+    const payload = {
+      title: form.title.value,
+      author: form.author.value,
+      img: form.img.value,
+      status: form.status.value,
+      price: parseFloat(form.price.value),
+      category: form.category.value,
+      description: form.description.value,
+    };
 
-    alert("Book updated (demo).");
-    navigate(-1);
+    setSaving(true);
+    const updated = await updateBook(id, payload);
+    setSaving(false);
+
+    if (updated) {
+      alert("✅ Book updated!");
+      navigate("/dashboard/librarian/my-books");
+    }
   };
 
-  if (!book) {
-    return (
-      <section>
-        <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-          Edit Book
-        </h1>
-        <p className="text-sm text-gray-600">
-          No book data found for ID: <span className="font-mono">{id}</span>.
-          Once you connect backend, this page will fetch by ID.
-        </p>
-      </section>
-    );
-  }
+  if (loading) return <p className="text-sm text-gray-600">Loading...</p>;
+  if (!book) return <p className="text-sm text-gray-600">Book not found.</p>;
 
   return (
     <section>
-      <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-        Edit Book
-      </h1>
-      <p className="text-sm text-gray-600 mb-6">
-        Update the information of this book.
-      </p>
+      <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">Edit Book</h1>
 
       <div className="bg-white border border-gray-200 rounded-xl p-5 max-w-xl">
-        <form onSubmit={handleUpdate} className="space-y-4 text-sm">
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">
-              Book Name
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
-            />
+        <form onSubmit={handleSubmit} className="space-y-3 text-sm">
+          <input name="title" defaultValue={book.title} className="w-full border rounded-lg px-3 py-2" />
+          <input name="author" defaultValue={book.author} className="w-full border rounded-lg px-3 py-2" />
+          <input name="img" defaultValue={book.img} className="w-full border rounded-lg px-3 py-2" />
+
+          <div className="grid gap-3 grid-cols-2">
+            <select name="status" defaultValue={book.status || "published"} className="w-full border rounded-lg px-3 py-2">
+              <option value="published">Published</option>
+              <option value="unpublished">Unpublished</option>
+            </select>
+
+            <input name="price" type="number" step="0.01" defaultValue={book.price} className="w-full border rounded-lg px-3 py-2" />
           </div>
 
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">
-              Author
-            </label>
-            <input
-              type="text"
-              value={author}
-              onChange={(e) => setAuthor(e.target.value)}
-              required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">
-              Book Image URL
-            </label>
-            <input
-              type="text"
-              value={img}
-              onChange={(e) => setImg(e.target.value)}
-              required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
-            />
-          </div>
-
-          <div className="grid gap-4 grid-cols-2">
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">
-                Status
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
-              >
-                <option value="published">Published</option>
-                <option value="unpublished">Unpublished</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">
-                Price (USD)
-              </label>
-              <input
-                type="number"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                step="0.01"
-                min="0"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">
-              Category
-            </label>
-            <input
-              type="text"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">
-              Description
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500 resize-none"
-            />
-          </div>
+          <input name="category" defaultValue={book.category || ""} className="w-full border rounded-lg px-3 py-2" />
+          <textarea name="description" rows={3} defaultValue={book.description || ""} className="w-full border rounded-lg px-3 py-2" />
 
           <button
-            type="submit"
-            className="mt-2 px-4 py-2.5 rounded-full bg-gray-900 text-white text-sm font-medium hover:bg-gray-800"
+            disabled={saving}
+            className={`px-4 py-2.5 rounded-full text-white ${saving ? "bg-gray-400" : "bg-gray-900 hover:bg-gray-800"}`}
           >
-            Save Changes
+            {saving ? "Saving..." : "Save Changes"}
           </button>
         </form>
       </div>
@@ -181,4 +87,4 @@ const LibrarianEditBook = () => {
   );
 };
 
-export default LibrarianEditBook;
+export default EditBook;

@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@stripe/react-stripe-js": "^5.4.1",
+    "@stripe/stripe-js": "^8.5.3",
     "@tailwindcss/vite": "^4.1.17",
     "axios": "^1.13.2",
     "firebase": "^12.6.0",
@@ -22,6 +24,7 @@
     "react-router": "^7.10.1",
     "react-router-dom": "^7.10.1",
     "react-toastify": "^11.0.5",
+    "stripe": "^20.0.0",
     "sweetalert2": "^11.26.4",
     "sweetalert2-react-content": "^5.1.0",
     "tailwindcss": "^4.1.17"
