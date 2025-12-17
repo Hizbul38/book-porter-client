@@ -1,28 +1,44 @@
 import { useContext } from "react";
 import { BooksContext } from "../../Providers/BooksProvider";
+import { AuthContext } from "../../Providers/AuthProvider";
 
 const LibrarianAddBook = () => {
   const { addBook } = useContext(BooksContext);
+  const { user } = useContext(AuthContext);
 
   const handleAddBook = async (e) => {
     e.preventDefault();
     const form = e.target;
 
+    if (!user?.email) {
+      alert("User not logged in");
+      return;
+    }
+
+    const imageUrl = form.image.value.trim();
+
+    // 🔥 Image URL validation (important)
+    if (!imageUrl.startsWith("http")) {
+      alert("Please provide a valid image URL (must start with http/https)");
+      return;
+    }
+
     const newBook = {
       title: form.title.value,
       author: form.author.value,
-      img: form.image.value,
-      status: form.status.value, // published / unpublished
+      image: imageUrl,              // ✅ FIXED (img ❌ → image ✅)
       price: parseFloat(form.price.value),
       category: form.category.value || "Others",
       description: form.description.value || "",
+      // status librarian set করবে না → backend default pending
     };
 
-    const saved = await addBook(newBook);
+    // 🔥 pass librarianEmail explicitly
+    const saved = await addBook(newBook, user.email);
 
     if (saved) {
       form.reset();
-      alert("✅ Book added successfully!");
+      alert("✅ Book added successfully (Pending for approval)");
     }
   };
 
@@ -32,8 +48,8 @@ const LibrarianAddBook = () => {
         Add New Book
       </h1>
       <p className="text-sm text-gray-600 mb-6">
-        Add a new book to the library catalog. Only published books will be
-        visible on the All Books page.
+        Add a new book to the library catalog. Newly added books require admin
+        approval before being published.
       </p>
 
       <div className="bg-white border border-gray-200 rounded-xl p-5 max-w-xl">
@@ -69,23 +85,11 @@ const LibrarianAddBook = () => {
               name="image"
               required
               className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
-              placeholder="https://..."
+              placeholder="https://example.com/book.jpg"
             />
           </div>
 
           <div className="grid gap-4 grid-cols-2">
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Status</label>
-              <select
-                name="status"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
-                defaultValue="published"
-              >
-                <option value="published">Published</option>
-                <option value="unpublished">Unpublished</option>
-              </select>
-            </div>
-
             <div>
               <label className="block text-xs text-gray-600 mb-1">
                 Price (USD)
@@ -100,18 +104,18 @@ const LibrarianAddBook = () => {
                 placeholder="e.g. 15.99"
               />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">
-              Category (optional)
-            </label>
-            <input
-              type="text"
-              name="category"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
-              placeholder="e.g. Programming, Self Help"
-            />
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">
+                Category (optional)
+              </label>
+              <input
+                type="text"
+                name="category"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+                placeholder="e.g. Programming"
+              />
+            </div>
           </div>
 
           <div>

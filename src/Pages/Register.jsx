@@ -2,20 +2,21 @@ import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../Providers/AuthProvider";
 
+const API_URL = "http://localhost:3000";
+
 const Register = () => {
   const { registerUser, updateUserProfile, loginWithGoogle } =
     useContext(AuthContext);
+
   const [error, setError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // OPTIONAL: if you want file upload, set an image hosting key
   const imageHostingKey = import.meta.env.VITE_IMAGE_HOSTING_KEY;
   const imageHostingUrl = `https://api.imgbb.com/1/upload?key=${imageHostingKey}`;
 
   const validatePassword = (password) => {
-    // at least 6 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
     const regex =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&~#^()_+\-=])[A-Za-z\d@$!%*?&~#^()_+\-=]{6,}$/;
     return regex.test(password);
@@ -33,7 +34,6 @@ const Register = () => {
     const password = form.password.value;
     const imageFile = form.image.files[0];
 
-    // password validation
     if (!validatePassword(password)) {
       setLoading(false);
       setPasswordError(
@@ -43,7 +43,7 @@ const Register = () => {
     }
 
     try {
-      // 1) upload image if file selected + hosting key set, otherwise keep null
+      // 1️⃣ upload image (optional)
       let photoURL = "";
 
       if (imageFile && imageHostingKey) {
@@ -61,17 +61,27 @@ const Register = () => {
         }
       }
 
-      // 2) create user
+      // 2️⃣ create firebase user
       const result = await registerUser(email, password);
       const currentUser = result.user;
 
-      // 3) update profile (name + photo)
+      // 3️⃣ update firebase profile
       await updateUserProfile(name, photoURL);
 
-      // 4) reset form & redirect
+      // 🔥 4️⃣ SAVE USER TO MONGODB (CRITICAL FIX)
+      await fetch(`${API_URL}/users`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          email: currentUser.email,
+        }),
+      });
+
+      // 5️⃣ reset & redirect
       form.reset();
       navigate("/");
-
     } catch (err) {
       console.error(err);
       setError(err.message);
@@ -80,117 +90,98 @@ const Register = () => {
     }
   };
 
-  const handleGoogleLogin = () => {
-    setError("");
-    setLoading(true);
-    loginWithGoogle()
-      .then(() => {
-        navigate("/");
-      })
-      .catch((err) => {
-        console.error(err);
-        setError(err.message);
-      })
-      .finally(() => setLoading(false));
+  // ======================
+  // GOOGLE LOGIN
+  // ======================
+  const handleGoogleLogin = async () => {
+    try {
+      setError("");
+      setLoading(true);
+
+      const result = await loginWithGoogle();
+      const user = result.user;
+
+      // 🔥 SAVE GOOGLE USER TO MONGODB
+      await fetch(`${API_URL}/users`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          email: user.email,
+        }),
+      });
+
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <section className="py-10">
       <div className="max-w-md mx-auto px-4">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Create Account</h1>
+        <h1 className="text-2xl font-bold mb-2">Create Account</h1>
         <p className="text-sm text-gray-600 mb-6">
-          Register with email & password. Your profile picture will be updated
-          automatically.
+          Register with email & password
         </p>
 
         <form onSubmit={handleRegister} className="space-y-4">
-          {/* Name */}
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Name</label>
-            <input
-              type="text"
-              name="name"
-              required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500"
-              placeholder="Your full name"
-            />
-          </div>
+          <input
+            type="text"
+            name="name"
+            placeholder="Full Name"
+            required
+            className="w-full border px-3 py-2 rounded"
+          />
 
-          {/* Email */}
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Email</label>
-            <input
-              type="email"
-              name="email"
-              required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500"
-              placeholder="you@example.com"
-            />
-          </div>
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            required
+            className="w-full border px-3 py-2 rounded"
+          />
 
-          {/* Password */}
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              name="password"
-              required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500"
-              placeholder="Strong password"
-            />
-            {passwordError && (
-              <p className="mt-1 text-xs text-red-500">{passwordError}</p>
-            )}
-          </div>
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            required
+            className="w-full border px-3 py-2 rounded"
+          />
 
-          {/* Image file (NOT text input) */}
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">
-              Profile Image
-            </label>
-            <input
-              type="file"
-              name="image"
-              accept="image/*"
-              className="w-full text-xs"
-            />
-            <p className="mt-1 text-[11px] text-gray-500">
-              Optional, but recommended. If image hosting key is not set, image
-              won&apos;t upload yet.
-            </p>
-          </div>
+          {passwordError && (
+            <p className="text-xs text-red-500">{passwordError}</p>
+          )}
+
+          <input type="file" name="image" accept="image/*" />
 
           {error && <p className="text-xs text-red-500">{error}</p>}
 
           <button
-            type="submit"
             disabled={loading}
-            className="w-full mt-2 px-4 py-2.5 rounded-full bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 disabled:opacity-60"
+            className="w-full bg-gray-900 text-white py-2 rounded"
           >
-            {loading ? "Creating account..." : "Register"}
+            {loading ? "Creating..." : "Register"}
           </button>
         </form>
 
-        {/* Divider */}
-        <div className="flex items-center gap-3 my-5">
-          <div className="h-px bg-gray-200 flex-1" />
-          <span className="text-[11px] uppercase text-gray-400">or</span>
-          <div className="h-px bg-gray-200 flex-1" />
-        </div>
+        <div className="my-4 text-center text-xs text-gray-500">OR</div>
 
-        {/* Social Login */}
         <button
           onClick={handleGoogleLogin}
-          className="w-full border border-gray-300 rounded-full px-4 py-2.5 text-sm flex items-center justify-center gap-2 hover:bg-gray-50"
+          className="w-full border py-2 rounded"
         >
-          <span>Continue with Google</span>
+          Continue with Google
         </button>
 
-        <p className="mt-4 text-xs text-gray-500 text-center">
+        <p className="mt-4 text-xs text-center">
           Already have an account?{" "}
-          <Link to="/login" className="text-gray-900 font-medium">
+          <Link to="/login" className="font-semibold">
             Login
           </Link>
         </p>

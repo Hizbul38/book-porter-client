@@ -1,10 +1,31 @@
 import { useContext } from "react";
-import { useNavigate } from "react-router-dom";
 import { OrderContext } from "../../Providers/OrderProvider";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 const MyOrders = () => {
   const { orders, cancelOrder } = useContext(OrderContext);
-  const navigate = useNavigate();
+
+  // 🔥 Stripe Checkout redirect
+  const handlePayNow = async (orderId) => {
+    try {
+      const res = await fetch(`${API_URL}/create-checkout-session`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ orderId }),
+      });
+
+      const data = await res.json();
+
+      if (data?.url) {
+        window.location.href = data.url; // ✅ Stripe Checkout page
+      }
+    } catch (error) {
+      alert("Payment initiation failed");
+    }
+  };
 
   return (
     <section>
@@ -30,36 +51,21 @@ const MyOrders = () => {
 
             <tbody>
               {orders.map((order) => {
-                const isPending = order.status === "pending";
-                const isUnpaid = order.paymentStatus === "unpaid";
-                const isCancelled = order.status === "cancelled";
+                const showCancel = order.status === "pending";
+                const showPay =
+                  order.status === "pending" &&
+                  order.paymentStatus === "unpaid";
 
-                const showCancelButton = isPending; // only pending
-                const showPayNowButton = isPending && isUnpaid; // only pending+unpaid
-
-                // cancel করলে সব buttons hide: conditions already handle it
                 return (
                   <tr key={order._id} className="border-t border-gray-100">
                     <td className="px-4 py-3">{order.bookTitle}</td>
 
                     <td className="px-4 py-3">
-                      {order.createdAt
-                        ? new Date(order.createdAt).toLocaleString()
-                        : "—"}
+                      {new Date(order.createdAt).toLocaleString()}
                     </td>
 
                     <td className="px-4 py-3 capitalize">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[11px] ${
-                          order.status === "pending"
-                            ? "bg-yellow-50 text-yellow-700"
-                            : order.status === "shipped"
-                            ? "bg-blue-50 text-blue-700"
-                            : order.status === "delivered"
-                            ? "bg-green-50 text-green-700"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
+                      <span className="px-2 py-0.5 rounded-full text-[11px] bg-yellow-50 text-yellow-700">
                         {order.status}
                       </span>
                     </td>
@@ -77,7 +83,7 @@ const MyOrders = () => {
                     </td>
 
                     <td className="px-4 py-3 text-right space-x-2">
-                      {showCancelButton && (
+                      {showCancel && (
                         <button
                           onClick={() => cancelOrder(order._id)}
                           className="text-xs px-3 py-1 rounded-full border border-gray-300 hover:bg-gray-100"
@@ -86,16 +92,14 @@ const MyOrders = () => {
                         </button>
                       )}
 
-                      {showPayNowButton && (
+                      {showPay && (
                         <button
-                          onClick={() => navigate(`/dashboard/payment/${order._id}`)}
+                          onClick={() => handlePayNow(order._id)}
                           className="text-xs px-3 py-1 rounded-full bg-gray-900 text-white hover:bg-gray-800"
                         >
                           Pay Now
                         </button>
                       )}
-
-                      {isCancelled && null}
                     </td>
                   </tr>
                 );
