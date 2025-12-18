@@ -6,7 +6,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 const MyOrders = () => {
   const { orders, cancelOrder } = useContext(OrderContext);
 
-  // 🔥 Stripe Checkout redirect
+  // ✅ Stripe Checkout redirect (FINAL)
   const handlePayNow = async (orderId) => {
     try {
       const res = await fetch(`${API_URL}/create-checkout-session`, {
@@ -20,9 +20,12 @@ const MyOrders = () => {
       const data = await res.json();
 
       if (data?.url) {
-        window.location.href = data.url; // ✅ Stripe Checkout page
+        window.location.href = data.url; // 🔥 Redirect to Stripe Checkout
+      } else {
+        alert("Payment initiation failed");
       }
     } catch (error) {
+      console.error(error);
       alert("Payment initiation failed");
     }
   };

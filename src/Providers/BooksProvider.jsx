@@ -1,52 +1,62 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useCallback, useState } from "react";
 
 export const BooksContext = createContext(null);
+
+const API_URL = "http://localhost:3000";
 
 const BooksProvider = ({ children }) => {
   const [books, setBooks] = useState([]);
   const [librarianBooks, setLibrarianBooks] = useState([]);
+  const [loadingBooks, setLoadingBooks] = useState(false);
 
-  const librarian = { email: "librarian@bookcourier.com" }; // demo
-
-  // public/all books
+  // =========================
+  // PUBLIC BOOKS
+  // =========================
   const fetchBooks = async () => {
     try {
-      const res = await fetch("http://localhost:3000/books?status=all");
+      setLoadingBooks(true);
+      const res = await fetch(`${API_URL}/books`);
       const data = await res.json();
-      if (res.ok) setBooks(Array.isArray(data) ? data : []);
+      setBooks(data || []);
     } catch (err) {
       console.error("fetchBooks error:", err);
+    } finally {
+      setLoadingBooks(false);
     }
   };
 
-  useEffect(() => {
-    fetchBooks();
-  }, []);
+  // =========================
+  // LIBRARIAN BOOKS (FIXED)
+  // =========================
+  const fetchLibrarianBooks = useCallback(async (email) => {
+    if (!email) {
+      setLibrarianBooks([]);
+      return;
+    }
 
-  // librarian books
-  const fetchLibrarianBooks = async () => {
     try {
       const res = await fetch(
-        `http://localhost:3000/librarian/books?email=${encodeURIComponent(librarian.email)}`
+        `${API_URL}/books?email=${encodeURIComponent(email)}`
       );
       const data = await res.json();
-      if (res.ok) setLibrarianBooks(Array.isArray(data) ? data : []);
+      setLibrarianBooks(data || []);
     } catch (err) {
       console.error("fetchLibrarianBooks error:", err);
+      setLibrarianBooks([]);
     }
-  };
-
-  useEffect(() => {
-    fetchLibrarianBooks();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // add book (with librarianEmail)
-  const addBook = async (bookData) => {
+  // =========================
+  // ADD BOOK (AUTO REFRESH)
+  // =========================
+  const addBook = async (book, librarianEmail) => {
     try {
-      const payload = { ...bookData, librarianEmail: librarian.email };
+      const payload = {
+        ...book,
+        librarianEmail, // 🔥 CRITICAL
+      };
 
-      const res = await fetch("http://localhost:3000/books", {
+      const res = await fetch(`${API_URL}/books`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
@@ -59,64 +69,56 @@ const BooksProvider = ({ children }) => {
         return null;
       }
 
-      // ✅ update both lists instantly
-      setBooks((prev) => [data, ...prev]);
-      setLibrarianBooks((prev) => [data, ...prev]);
+      // 🔥 auto sync MyBooks
+      await fetchLibrarianBooks(librarianEmail);
+
       return data;
     } catch (err) {
       console.error("addBook error:", err);
-      alert("Something went wrong!");
       return null;
     }
   };
 
-  // edit book (db)
-  const updateBook = async (id, updatedFields) => {
+  // =========================
+  // TOGGLE STATUS
+  // =========================
+  const toggleBookStatus = async (id, currentStatus) => {
+    const newStatus =
+      currentStatus === "published" ? "unpublished" : "published";
+
     try {
-      const res = await fetch(`http://localhost:3000/books/${id}`, {
+      const res = await fetch(`${API_URL}/books/${id}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(updatedFields),
+        body: JSON.stringify({ status: newStatus }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data?.message || "Update failed");
-        return null;
+        alert(data?.message || "Status update failed");
+        return;
       }
 
-      // update in both states
-      setBooks((prev) => prev.map((b) => (String(b._id) === String(id) ? data : b)));
+      // 🔥 update state locally
       setLibrarianBooks((prev) =>
-        prev.map((b) => (String(b._id) === String(id) ? data : b))
+        prev.map((b) => (b._id === id ? data : b))
       );
-
-      return data;
     } catch (err) {
-      console.error("updateBook error:", err);
-      alert("Something went wrong!");
-      return null;
+      console.error("toggleBookStatus error:", err);
     }
-  };
-
-  // toggle publish/unpublish (db via updateBook)
-  const toggleBookStatus = async (id, currentStatus) => {
-    const next = currentStatus === "published" ? "unpublished" : "published";
-    return updateBook(id, { status: next });
   };
 
   return (
     <BooksContext.Provider
       value={{
         books,
-        fetchBooks,
         librarianBooks,
+        loadingBooks,
+        fetchBooks,
         fetchLibrarianBooks,
         addBook,
-        updateBook,
         toggleBookStatus,
-        librarian, // demo
       }}
     >
       {children}

@@ -1,21 +1,33 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import { AuthContext } from "./AuthProvider";
 
 export const UserContext = createContext(null);
 
 const UserProvider = ({ children }) => {
-  const demoEmail = "demo@bookcourier.com";
+  const { user, loading: authLoading } = useContext(AuthContext);
 
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
+  // 🔹 Fetch user profile by logged-in email
   const fetchProfile = async () => {
+    if (!user?.email) {
+      setProfile(null);
+      setLoadingProfile(false);
+      return;
+    }
+
     try {
       setLoadingProfile(true);
       const res = await fetch(
-        `http://localhost:3000/users?email=${encodeURIComponent(demoEmail)}`
+        `http://localhost:3000/users?email=${encodeURIComponent(user.email)}`
       );
       const data = await res.json();
-      if (res.ok) setProfile(data);
+
+      if (res.ok) {
+        setProfile(data); 
+        // expected: { _id, name, email, role, photoURL }
+      }
     } catch (err) {
       console.error("fetchProfile error:", err);
     } finally {
@@ -23,10 +35,15 @@ const UserProvider = ({ children }) => {
     }
   };
 
+  // 🔹 Re-fetch profile when auth user changes
   useEffect(() => {
-    fetchProfile();
-  }, []);
+    if (!authLoading) {
+      fetchProfile();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading]);
 
+  // 🔹 Update profile (name, photo)
   const updateProfile = async ({ name, photoURL }) => {
     if (!profile?._id) return null;
 
@@ -54,7 +71,15 @@ const UserProvider = ({ children }) => {
   };
 
   return (
-    <UserContext.Provider value={{ profile, loadingProfile, fetchProfile, updateProfile }}>
+    <UserContext.Provider
+      value={{
+        profile,          // full user object (role included)
+        role: profile?.role, // convenience
+        loadingProfile,
+        fetchProfile,
+        updateProfile,
+      }}
+    >
       {children}
     </UserContext.Provider>
   );

@@ -2,6 +2,16 @@ import { useContext, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { OrderContext } from "../Providers/OrderProvider";
 
+const FALLBACK_IMAGE =
+  "https://via.placeholder.com/600x800?text=No+Image";
+
+// 🔥 old (img) + new (image) support
+const getBookImage = (book) => {
+  if (book?.image && book.image.startsWith("http")) return book.image;
+  if (book?.img && book.img.startsWith("http")) return book.img;
+  return FALLBACK_IMAGE;
+};
+
 const BookDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -11,17 +21,17 @@ const BookDetails = () => {
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Order modal
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [placing, setPlacing] = useState(false);
 
-  // demo user – pore real logged in user diye replace korba
-  const user = {
-    name: "Demo User",
-    email: "demo@bookcourier.com",
-  };
-
+  // ===============================
+  // Load single book
+  // ===============================
   useEffect(() => {
     const loadBook = async () => {
       try {
@@ -42,11 +52,69 @@ const BookDetails = () => {
     loadBook();
   }, [id]);
 
+  // ===============================
+  // Order submit
+  // ===============================
+  const handlePlaceOrder = async (e) => {
+    e.preventDefault();
+
+    if (!name.trim() || !email.trim() || !phone.trim() || !address.trim()) {
+      alert("All fields are required.");
+      return;
+    }
+
+    try {
+      setPlacing(true);
+
+      const orderPayload = {
+        bookId: book._id,
+        userName: name,
+        userEmail: email,
+        phone,
+        address,
+      };
+
+      const res = await fetch("http://localhost:3000/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(orderPayload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data?.message || "Order failed");
+        return;
+      }
+
+      // update MyOrders instantly
+      addOrderToList(data);
+
+      // reset
+      setName("");
+      setEmail("");
+      setPhone("");
+      setAddress("");
+      setIsModalOpen(false);
+
+      alert("✅ Order placed successfully!");
+      navigate("/dashboard/my-orders");
+    } catch (error) {
+      console.error("Order create error:", error);
+      alert("Something went wrong!");
+    } finally {
+      setPlacing(false);
+    }
+  };
+
+  // ===============================
+  // Loading / not found
+  // ===============================
   if (loading) {
     return (
       <section className="py-10">
         <div className="max-w-4xl mx-auto px-4">
-          <p className="text-gray-700 mb-4">Loading...</p>
+          <p className="text-gray-700">Loading...</p>
         </div>
       </section>
     );
@@ -68,54 +136,6 @@ const BookDetails = () => {
     );
   }
 
-  const handlePlaceOrder = async (e) => {
-    e.preventDefault();
-
-    if (!phone.trim() || !address.trim()) {
-      alert("Phone and address are required.");
-      return;
-    }
-
-    try {
-      setPlacing(true);
-
-      const orderPayload = {
-        bookId: book._id,
-        userEmail: user.email,
-        phone,
-        address,
-      };
-
-      const res = await fetch("http://localhost:3000/orders", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(orderPayload),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data?.message || "Order failed");
-        return;
-      }
-
-      // ✅ instant MyOrders list update
-      addOrderToList(data);
-
-      setPhone("");
-      setAddress("");
-      setIsModalOpen(false);
-
-      alert("✅ Order placed successfully!");
-      navigate("/dashboard/my-orders");
-    } catch (error) {
-      console.error("Order create error:", error);
-      alert("Something went wrong!");
-    } finally {
-      setPlacing(false);
-    }
-  };
-
   return (
     <section className="py-10">
       <div className="max-w-5xl mx-auto px-4">
@@ -127,14 +147,17 @@ const BookDetails = () => {
         </button>
 
         <div className="grid gap-8 md:grid-cols-2">
+          {/* IMAGE */}
           <div className="w-full h-72 md:h-96 bg-gray-100 rounded-xl overflow-hidden">
             <img
-              src={book.img}
+              src={getBookImage(book)}
               alt={book.title}
+              onError={(e) => (e.currentTarget.src = FALLBACK_IMAGE)}
               className="w-full h-full object-cover"
             />
           </div>
 
+          {/* DETAILS */}
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
               {book.title}
@@ -168,18 +191,19 @@ const BookDetails = () => {
             </div>
 
             <div className="mt-6 space-y-2 text-xs text-gray-500">
-              <p>Delivery: 2-5 business days (demo)</p>
+              <p>Delivery: 2–5 business days (demo)</p>
               <p>Return Policy: 7 days from delivery (demo)</p>
             </div>
           </div>
         </div>
 
+        {/* ORDER MODAL */}
         {isModalOpen && (
           <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40">
             <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6 relative">
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl leading-none"
+                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl"
               >
                 ×
               </button>
@@ -198,9 +222,11 @@ const BookDetails = () => {
                   </label>
                   <input
                     type="text"
-                    value={user.name}
-                    readOnly
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-600 text-sm"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    placeholder="Enter your name"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
                   />
                 </div>
 
@@ -210,9 +236,11 @@ const BookDetails = () => {
                   </label>
                   <input
                     type="email"
-                    value={user.email}
-                    readOnly
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-600 text-sm"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    placeholder="Enter your email"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
                   />
                 </div>
 
@@ -226,7 +254,7 @@ const BookDetails = () => {
                     onChange={(e) => setPhone(e.target.value)}
                     required
                     placeholder="Enter your phone number"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
                   />
                 </div>
 
@@ -240,7 +268,7 @@ const BookDetails = () => {
                     required
                     rows={3}
                     placeholder="House, street, city, zip code"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500 resize-none"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500 resize-none"
                   />
                 </div>
 

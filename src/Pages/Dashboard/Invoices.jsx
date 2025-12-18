@@ -1,31 +1,55 @@
 import { useContext, useEffect, useState } from "react";
-import { OrderContext } from "../../Providers/OrderProvider";
+import { AuthContext } from "../../Providers/AuthProvider";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 const Invoices = () => {
-  const { user } = useContext(OrderContext);
+  const { user, loading } = useContext(AuthContext); // ✅ Auth user
   const [invoices, setInvoices] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingInvoices, setLoadingInvoices] = useState(true);
 
   useEffect(() => {
+    // 🛑 guard clause (MOST IMPORTANT)
+    if (loading || !user?.email) return;
+
     const loadInvoices = async () => {
       try {
-        setLoading(true);
+        setLoadingInvoices(true);
         const res = await fetch(
-          `http://localhost:3000/invoices?email=${encodeURIComponent(user.email)}`
+          `${API_URL}/invoices?email=${encodeURIComponent(user.email)}`
         );
         const data = await res.json();
-        if (res.ok) setInvoices(Array.isArray(data) ? data : []);
-      } catch {
+
+        if (res.ok && Array.isArray(data)) {
+          setInvoices(data);
+        } else {
+          setInvoices([]);
+        }
+      } catch (error) {
+        console.error("Invoice fetch error:", error);
         setInvoices([]);
       } finally {
-        setLoading(false);
+        setLoadingInvoices(false);
       }
     };
 
     loadInvoices();
-  }, [user.email]);
+  }, [user?.email, loading]);
 
-  if (loading) return <p className="text-sm text-gray-600">Loading...</p>;
+  // ===============================
+  // UI STATES
+  // ===============================
+  if (loading || loadingInvoices) {
+    return <p className="text-sm text-gray-600">Loading invoices...</p>;
+  }
+
+  if (!user) {
+    return (
+      <p className="text-sm text-red-500">
+        Please login to view invoices.
+      </p>
+    );
+  }
 
   return (
     <section>
@@ -44,15 +68,22 @@ const Invoices = () => {
                 <th className="px-4 py-3 text-left">Book</th>
               </tr>
             </thead>
+
             <tbody>
               {invoices.map((inv) => (
                 <tr key={inv._id} className="border-t border-gray-100">
                   <td className="px-4 py-3">{inv.paymentId}</td>
-                  <td className="px-4 py-3">${Number(inv.amount).toFixed(2)}</td>
                   <td className="px-4 py-3">
-                    {inv.paymentDate ? new Date(inv.paymentDate).toLocaleString() : "—"}
+                    ${Number(inv.amount).toFixed(2)}
                   </td>
-                  <td className="px-4 py-3">{inv.bookTitle || "—"}</td>
+                  <td className="px-4 py-3">
+                    {inv.paymentDate
+                      ? new Date(inv.paymentDate).toLocaleString()
+                      : "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    {inv.bookTitle || "—"}
+                  </td>
                 </tr>
               ))}
             </tbody>

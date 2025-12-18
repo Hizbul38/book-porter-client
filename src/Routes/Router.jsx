@@ -18,7 +18,8 @@ import MyOrders from "../Pages/Dashboard/MyOrders";
 import MyProfile from "../Pages/Dashboard/MyProfile";
 import Invoices from "../Pages/Dashboard/Invoices";
 
-// Stripe
+// Stripe / Payment
+import Payment from "../Pages/Dashboard/Payment";
 import PaymentSuccess from "../Pages/Dashboard/PaymentSuccess";
 import PaymentCancel from "../Pages/Dashboard/PaymentCancel";
 
@@ -76,20 +77,18 @@ const router = createBrowserRouter([
       { path: "profile", element: <MyProfile /> },
       { path: "invoices", element: <Invoices /> },
 
-      // Stripe result
+      // -------- Payment --------
+      { path: "payment/:id", element: <Payment /> },
       { path: "payment-success", element: <PaymentSuccess /> },
       { path: "payment-cancel", element: <PaymentCancel /> },
 
       // -------- Librarian --------
       { path: "librarian/add-book", element: <LibrarianAddBook /> },
       { path: "librarian/my-books", element: <LibrarianMyBooks /> },
-
-      // 🔥 Edit Book (requirement matched)
       {
         path: "librarian/books/:id/edit",
         element: <LibrarianEditBook />,
       },
-
       { path: "librarian/orders", element: <LibrarianOrders /> },
 
       // -------- Admin --------
