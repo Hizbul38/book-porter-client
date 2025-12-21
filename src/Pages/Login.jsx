@@ -1,6 +1,7 @@
 import { useContext, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../Providers/AuthProvider";
+import toast from "react-hot-toast";
 
 const Login = () => {
   const { loginUser, loginWithGoogle } = useContext(AuthContext);
@@ -11,7 +12,7 @@ const Login = () => {
 
   const from = location.state?.from?.pathname || "/";
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
@@ -20,30 +21,46 @@ const Login = () => {
     const email = form.email.value;
     const password = form.password.value;
 
-    loginUser(email, password)
-      .then(() => {
-        form.reset();
-        navigate(from, { replace: true });
-      })
-      .catch((err) => {
-        console.error(err);
-        setError("Invalid email or password.");
-      })
-      .finally(() => setLoading(false));
+    const toastId = toast.loading("Logging in...");
+
+    try {
+      await loginUser(email, password);
+
+      form.reset();
+
+      toast.success("✅ Login successful!", { id: toastId });
+
+      navigate(from, { replace: true });
+    } catch (err) {
+      console.error(err);
+      setError("Invalid email or password.");
+
+      toast.error("❌ Invalid email or password.", { id: toastId });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     setError("");
     setLoading(true);
-    loginWithGoogle()
-      .then(() => {
-        navigate(from, { replace: true });
-      })
-      .catch((err) => {
-        console.error(err);
-        setError("Google login failed. Try again.");
-      })
-      .finally(() => setLoading(false));
+
+    const toastId = toast.loading("Signing in with Google...");
+
+    try {
+      await loginWithGoogle();
+
+      toast.success("✅ Google login successful!", { id: toastId });
+
+      navigate(from, { replace: true });
+    } catch (err) {
+      console.error(err);
+      setError("Google login failed. Try again.");
+
+      toast.error("❌ Google login failed.", { id: toastId });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -67,9 +84,7 @@ const Login = () => {
           </div>
 
           <div>
-            <label className="block text-xs text-gray-600 mb-1">
-              Password
-            </label>
+            <label className="block text-xs text-gray-600 mb-1">Password</label>
             <input
               type="password"
               name="password"
@@ -98,7 +113,8 @@ const Login = () => {
 
         <button
           onClick={handleGoogleLogin}
-          className="w-full border border-gray-300 rounded-full px-4 py-2.5 text-sm flex items-center justify-center gap-2 hover:bg-gray-50"
+          disabled={loading}
+          className="w-full border border-gray-300 rounded-full px-4 py-2.5 text-sm flex items-center justify-center gap-2 hover:bg-gray-50 disabled:opacity-60"
         >
           <span>Continue with Google</span>
         </button>

@@ -23,6 +23,7 @@ import DashboardHome from "../Pages/Dashboard/DashboardHome";
 import MyOrders from "../Pages/Dashboard/MyOrders";
 import MyProfile from "../Pages/Dashboard/MyProfile";
 import Invoices from "../Pages/Dashboard/Invoices";
+import MyWishlist from "../Pages/Dashboard/MyWishlist"; // ✅ NEW
 
 // =====================
 // Stripe / Payment
@@ -99,6 +100,7 @@ const router = createBrowserRouter([
       // -------- User --------
       { index: true, element: <DashboardHome /> },
       { path: "my-orders", element: <MyOrders /> },
+      { path: "my-wishlist", element: <MyWishlist /> }, // ✅ NEW ROUTE
       { path: "profile", element: <MyProfile /> },
       { path: "invoices", element: <Invoices /> },
 

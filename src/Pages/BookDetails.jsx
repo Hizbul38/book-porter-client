@@ -1,121 +1,244 @@
 import { useContext, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { AuthContext } from "../Providers/AuthProvider";
-import { OrderContext } from "../Providers/OrderProvider";
+import ReviewsSection from "../Components/ReviewsSection";
+import toast from "react-hot-toast";
+import Swal from "sweetalert2";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-const FALLBACK_IMAGE = "https://via.placeholder.com/600x800?text=No+Image";
-
-const getBookImage = (book) => {
-  const img = book?.image || book?.img || book?.photo || book?.cover;
-  if (typeof img === "string" && img.startsWith("http")) return img;
-  return FALLBACK_IMAGE;
-};
+const FALLBACK_IMAGE = "https://via.placeholder.com/400x520?text=No+Image";
 
 const BookDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-
-  const { user } = useContext(AuthContext);
-  const { addOrderToList } = useContext(OrderContext);
+  const { user, loading: authLoading } = useContext(AuthContext);
 
   const [book, setBook] = useState(null);
-  const [loadingBook, setLoadingBook] = useState(true);
-  const [bookError, setBookError] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  // Modal + form
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Wishlist
+  const [wishLoading, setWishLoading] = useState(false);
+  const [wishAdded, setWishAdded] = useState(false);
+  const [wishChecked, setWishChecked] = useState(false);
+
+  // Order Modal
+  const [orderOpen, setOrderOpen] = useState(false);
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [placing, setPlacing] = useState(false);
+  const [ordering, setOrdering] = useState(false);
 
-  const displayName = useMemo(() => {
-    return user?.displayName || user?.name || "—";
-  }, [user]);
+  const title = useMemo(() => book?.name || book?.title || "Untitled", [book]);
+  const author = useMemo(() => book?.author || "—", [book]);
 
-  // ===============================
-  // Load book details
-  // ===============================
+  const image = useMemo(() => {
+    const img = book?.image;
+    return typeof img === "string" && img.startsWith("http") ? img : FALLBACK_IMAGE;
+  }, [book]);
+
+  const isPublished = useMemo(
+    () => String(book?.status || "published").toLowerCase() === "published",
+    [book]
+  );
+
+  // ✅ Load book
   useEffect(() => {
-    const loadBook = async () => {
+    if (!API_URL) {
+      console.error("VITE_API_URL missing");
+      setBook(null);
+      setLoading(false);
+      return;
+    }
+
+    const load = async () => {
       try {
-        setLoadingBook(true);
-        setBookError("");
+        setLoading(true);
 
-        if (!id) {
-          setBook(null);
-          setBookError("Invalid book id.");
-          return;
-        }
+        // 1) public fetch
+        const res = await fetch(`${API_URL}/books/${id}`);
+        const data = await res.json().catch(() => ({}));
 
-        const res = await fetch(`${API_URL}/books/${encodeURIComponent(id)}`);
-
-        if (!res.ok) {
-          const text = await res.text().catch(() => "");
-          setBook(null);
-          setBookError(text || "Book not found");
-          return;
-        }
-
-        const data = await res.json();
-        if (data?._id) {
+        if (res.ok) {
           setBook(data);
-        } else {
-          setBook(null);
-          setBookError("Book not found");
+          return;
         }
-      } catch (err) {
-        console.error("Book load error:", err);
+
+        // 2) if not ok, try token fetch (owner librarian/admin unpublished)
+        if (!user || authLoading) {
+          setBook(null);
+          return;
+        }
+
+        const token = await user.getIdToken(true);
+
+        const res2 = await fetch(`${API_URL}/books/${id}`, {
+          headers: { authorization: `Bearer ${token}` },
+        });
+
+        const data2 = await res2.json().catch(() => ({}));
+
+        if (!res2.ok) {
+          setBook(null);
+          return;
+        }
+
+        setBook(data2);
+      } catch (e) {
+        console.error("BookDetails load error:", e);
         setBook(null);
-        setBookError("Failed to load book.");
       } finally {
-        setLoadingBook(false);
+        setLoading(false);
       }
     };
 
-    loadBook();
-  }, [id]);
+    load();
+  }, [id, user, authLoading]);
 
-  // ===============================
-  // Open modal
-  // ===============================
-  const openOrderModal = () => {
+  // ✅ Check wishlist already added
+  useEffect(() => {
+    if (!API_URL) return;
+
+    const checkWishlist = async () => {
+      try {
+        setWishChecked(false);
+        setWishAdded(false);
+
+        if (authLoading) return;
+
+        if (!user) {
+          setWishChecked(true);
+          return;
+        }
+
+        const token = await user.getIdToken(true);
+
+        const res = await fetch(`${API_URL}/wishlist`, {
+          headers: { authorization: `Bearer ${token}` },
+        });
+
+        const data = await res.json().catch(() => []);
+
+        if (!res.ok) {
+          console.error("wishlist check error:", res.status, data);
+          setWishChecked(true);
+          return;
+        }
+
+        const list = Array.isArray(data) ? data : [];
+        const exists = list.some((w) => String(w.bookId) === String(id));
+        setWishAdded(exists);
+      } catch (e) {
+        console.error("wishlist check error:", e);
+      } finally {
+        setWishChecked(true);
+      }
+    };
+
+    checkWishlist();
+  }, [id, user, authLoading]);
+
+  const handleWishlist = async () => {
     if (!user) {
-      alert("Please login first");
+      Swal.fire({
+        icon: "info",
+        title: "Login required",
+        text: "Please login first",
+        confirmButtonText: "OK",
+      });
       navigate("/login");
-      return;
-    }
-    setIsModalOpen(true);
-  };
-
-  // ===============================
-  // Place order
-  // ===============================
-  const handlePlaceOrder = async (e) => {
-    e.preventDefault();
-
-    if (!user) {
-      alert("Please login first");
-      return navigate("/login");
-    }
-
-    const cleanPhone = phone.trim();
-    const cleanAddress = address.trim();
-
-    if (cleanPhone.length < 6) {
-      alert("Please enter a valid phone number");
-      return;
-    }
-    if (cleanAddress.length < 5) {
-      alert("Please enter a valid address");
       return;
     }
 
     try {
-      setPlacing(true);
+      setWishLoading(true);
 
-      const token = await user.getIdToken(true); // ✅ always fresh
+      const token = await user.getIdToken(true);
+
+      const res = await fetch(`${API_URL}/wishlist`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ bookId: id }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        Swal.fire({
+          icon: "error",
+          title: "Failed",
+          text: data?.message || "Failed to add wishlist",
+        });
+        return;
+      }
+
+      setWishAdded(true);
+      toast("✅ Added to wishlist");
+    } catch (e) {
+      console.error("wishlist add error:", e);
+      Swal.fire({
+        icon: "error",
+        title: "Failed",
+        text: "Failed to add wishlist",
+      });
+    } finally {
+      setWishLoading(false);
+    }
+  };
+
+  // ✅ Open Order Modal
+  const handleOpenOrder = () => {
+    if (!user) {
+      Swal.fire({
+        icon: "info",
+        title: "Login required",
+        text: "Please login first",
+        confirmButtonText: "OK",
+      });
+      navigate("/login");
+      return;
+    }
+    if (!isPublished) {
+      Swal.fire({
+        icon: "warning",
+        title: "Order Disabled",
+        text: "This book is unpublished. Order disabled.",
+      });
+      return;
+    }
+    setOrderOpen(true);
+  };
+
+  // ✅ Place Order
+  const handlePlaceOrder = async (e) => {
+    e.preventDefault();
+
+    if (!user) {
+      Swal.fire({
+        icon: "info",
+        title: "Login required",
+        text: "Please login first",
+        confirmButtonText: "OK",
+      });
+      navigate("/login");
+      return;
+    }
+
+    if (!phone.trim() || !address.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Required",
+        text: "Phone and Address required",
+      });
+      return;
+    }
+
+    try {
+      setOrdering(true);
+
+      const token = await user.getIdToken(true);
 
       const res = await fetch(`${API_URL}/orders`, {
         method: "POST",
@@ -124,142 +247,172 @@ const BookDetails = () => {
           authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          bookId: book?._id,
-          phone: cleanPhone,
-          address: cleanAddress,
+          bookId: id,
+          phone: phone.trim(),
+          address: address.trim(),
         }),
       });
 
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        alert(data?.message || "Order failed");
+        Swal.fire({
+          icon: "error",
+          title: "Order Failed",
+          text: data?.message || "Order failed",
+        });
         return;
       }
 
-      addOrderToList?.(data);
+      Swal.fire({
+        icon: "success",
+        title: "Success",
+        text: "✅ Order placed successfully!",
+        timer: 1500,
+        showConfirmButton: false,
+      });
 
+      setOrderOpen(false);
       setPhone("");
       setAddress("");
-      setIsModalOpen(false);
 
-      alert("✅ Order placed successfully!");
       navigate("/dashboard/my-orders");
     } catch (err) {
-      console.error("Order error:", err);
-      alert("Something went wrong");
+      console.error("order error:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Order Failed",
+        text: "Order failed",
+      });
     } finally {
-      setPlacing(false);
+      setOrdering(false);
     }
   };
 
-  // ===============================
-  // UI States
-  // ===============================
-  if (loadingBook) {
-    return <p className="p-6 text-sm text-gray-600">Loading book...</p>;
-  }
+  if (loading) return <p className="p-6 text-sm">Loading book...</p>;
+  if (!book) return <p className="p-6 text-sm text-red-600">Book not found.</p>;
 
-  if (!book) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-10">
-        <p className="text-sm text-red-600">{bookError || "Book not found"}</p>
-        <button
-          onClick={() => navigate(-1)}
-          className="mt-4 px-4 py-2 border rounded-md text-sm"
-        >
-          Back
-        </button>
-      </div>
-    );
-  }
+  const displayName =
+    user?.displayName ||
+    user?.name ||
+    (user?.email ? user.email.split("@")[0] : "User");
 
   return (
     <section className="py-10">
       <div className="max-w-5xl mx-auto px-4">
-        <button
-          onClick={() => navigate(-1)}
-          className="mb-4 text-sm text-gray-500"
-        >
-          ← Back
-        </button>
+        <div className="mb-4">
+          <Link to="/all-books" className="text-sm underline text-gray-600">
+            ← Back to all books
+          </Link>
+        </div>
 
         <div className="grid gap-8 md:grid-cols-2">
-          {/* IMAGE */}
-          <div className="h-72 md:h-96 bg-gray-100 rounded-xl overflow-hidden">
+          <div className="bg-gray-100 rounded-xl overflow-hidden">
             <img
-              src={getBookImage(book)}
-              alt={book.title || "Book"}
+              src={image}
+              alt={title}
               onError={(e) => (e.currentTarget.src = FALLBACK_IMAGE)}
-              className="w-full h-full object-cover"
+              className="w-full h-[520px] object-cover"
             />
           </div>
 
-          {/* DETAILS */}
           <div>
-            <h1 className="text-2xl font-bold">{book.title}</h1>
-            <p className="text-sm text-gray-500">by {book.author || "—"}</p>
+            <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+            <p className="text-sm text-gray-600 mt-1">by {author}</p>
 
-            <p className="mt-4 text-sm text-gray-700">
-              {book.description || "No description available."}
+            <p className="text-xl font-semibold mt-4">
+              ${Number(book?.price || 0).toFixed(2)}
             </p>
 
-            <p className="mt-6 text-xl font-semibold">
-              ${Number(book.price || 0).toFixed(2)}
-            </p>
+            {book?.description && (
+              <p className="text-sm text-gray-700 mt-4 leading-relaxed">
+                {book.description}
+              </p>
+            )}
 
-            <button
-              onClick={openOrderModal}
-              className="mt-6 px-5 py-2 rounded-full bg-gray-900 text-white text-sm hover:bg-gray-800"
-            >
-              Order Now
-            </button>
+            <div className="mt-6 flex flex-wrap gap-3">
+              {/* ✅ Order Now */}
+              <button
+                onClick={handleOpenOrder}
+                className="px-5 py-2.5 rounded-full text-sm text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Order Now
+              </button>
 
-            <p className="mt-2 text-xs text-gray-500">
-              Orders start as <span className="font-semibold">pending</span> and{" "}
-              payment status <span className="font-semibold">unpaid</span>.
-            </p>
+              {/* ✅ Wishlist */}
+              <button
+                onClick={handleWishlist}
+                disabled={!wishChecked || wishLoading || wishAdded}
+                className={`px-5 py-2.5 rounded-full text-sm text-white ${
+                  !wishChecked || wishLoading || wishAdded
+                    ? "bg-gray-400"
+                    : "bg-gray-900 hover:bg-gray-800"
+                }`}
+              >
+                {!wishChecked
+                  ? "Checking..."
+                  : wishAdded
+                  ? "Wishlisted ✅"
+                  : wishLoading
+                  ? "Adding..."
+                  : "Add to Wishlist"}
+              </button>
+
+              <button
+                onClick={() => navigate("/dashboard/my-wishlist")}
+                className="px-5 py-2.5 rounded-full text-sm border border-gray-300 hover:bg-gray-100"
+              >
+                Go to My Wishlist
+              </button>
+            </div>
+
+            {!isPublished && (
+              <p className="text-xs text-red-600 mt-3">
+                This book is unpublished, public users can’t order it.
+              </p>
+            )}
           </div>
         </div>
 
-        {/* ORDER MODAL */}
-        {isModalOpen && (
+        {/* ✅ Reviews Section */}
+        <ReviewsSection bookId={book?._id || id} />
+
+        {/* ✅ ORDER MODAL */}
+        {orderOpen && (
           <div
-            className="fixed inset-0 z-30 bg-black/40 flex items-center justify-center"
-            onClick={() => setIsModalOpen(false)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+            onClick={() => setOrderOpen(false)}
           >
             <div
-              className="bg-white rounded-xl p-6 w-full max-w-md mx-4 relative"
+              className="w-full max-w-lg bg-white rounded-2xl shadow-lg p-5"
               onClick={(e) => e.stopPropagation()}
             >
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="absolute top-3 right-3 text-xl text-gray-400 hover:text-gray-600"
-                aria-label="Close"
-              >
-                ×
-              </button>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Place Order</h3>
+                <button
+                  onClick={() => setOrderOpen(false)}
+                  className="text-sm px-3 py-1 rounded-full border hover:bg-gray-100"
+                >
+                  ✕
+                </button>
+              </div>
 
-              <h2 className="text-lg font-semibold mb-4">Place Your Order</h2>
-
-              <form onSubmit={handlePlaceOrder} className="space-y-3 text-sm">
+              <form onSubmit={handlePlaceOrder} className="space-y-4 text-sm">
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">Name</label>
                   <input
-                    type="text"
                     value={displayName}
                     readOnly
-                    className="w-full border px-3 py-2 rounded-md bg-gray-100"
+                    className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 outline-none"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">Email</label>
                   <input
-                    type="email"
                     value={user?.email || ""}
                     readOnly
-                    className="w-full border px-3 py-2 rounded-md bg-gray-100"
+                    className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 outline-none"
                   />
                 </div>
 
@@ -268,12 +421,11 @@ const BookDetails = () => {
                     Phone Number
                   </label>
                   <input
-                    type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     required
-                    placeholder="Enter phone number"
-                    className="w-full border px-3 py-2 rounded-md"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+                    placeholder="Your phone number"
                   />
                 </div>
 
@@ -282,21 +434,21 @@ const BookDetails = () => {
                   <textarea
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    required
                     rows={3}
-                    placeholder="House, street, city"
-                    className="w-full border px-3 py-2 rounded-md resize-none"
+                    required
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500 resize-none"
+                    placeholder="Delivery address"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  disabled={placing}
-                  className={`w-full mt-2 py-2 rounded-md text-white ${
-                    placing ? "bg-gray-400" : "bg-gray-900 hover:bg-gray-800"
+                  disabled={ordering}
+                  className={`w-full py-2.5 rounded-full text-white ${
+                    ordering ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
                   }`}
                 >
-                  {placing ? "Placing..." : "Place Order"}
+                  {ordering ? "Placing order..." : "Place Order"}
                 </button>
               </form>
             </div>

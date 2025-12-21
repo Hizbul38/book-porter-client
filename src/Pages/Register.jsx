@@ -1,20 +1,21 @@
 import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { AuthContext } from "../Providers/AuthProvider";
 
-const API_URL = "http://localhost:3000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 const Register = () => {
   const { registerUser, updateUserProfile, loginWithGoogle } =
     useContext(AuthContext);
 
-  const [error, setError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const imageHostingKey = import.meta.env.VITE_IMAGE_HOSTING_KEY;
-  const imageHostingUrl = `https://api.imgbb.com/1/upload?key=${imageHostingKey}`;
+  const imageHostingUrl = imageHostingKey
+    ? `https://api.imgbb.com/1/upload?key=${imageHostingKey}`
+    : "";
 
   const validatePassword = (password) => {
     const regex =
@@ -22,69 +23,98 @@ const Register = () => {
     return regex.test(password);
   };
 
+  const saveUserToDB = async (email) => {
+    if (!API_URL) return;
+
+    try {
+      await fetch(`${API_URL}/users`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+    } catch (e) {
+      // Register success হলেও DB save fail হলে warn দিবে
+      toast.error("Account created, but user save failed in DB.");
+    }
+  };
+
+  const uploadImageToImgbb = async (imageFile) => {
+    if (!imageFile) return "";
+    if (!imageHostingUrl) return "";
+
+    try {
+      const formData = new FormData();
+      formData.append("image", imageFile);
+
+      const res = await fetch(imageHostingUrl, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (data?.success) return data?.data?.display_url || "";
+      return "";
+    } catch (e) {
+      return "";
+    }
+  };
+
   const handleRegister = async (e) => {
     e.preventDefault();
-    setError("");
-    setPasswordError("");
-    setLoading(true);
+    if (loading) return;
 
     const form = e.target;
-    const name = form.name.value;
-    const email = form.email.value;
+    const name = form.name.value.trim();
+    const email = form.email.value.trim();
     const password = form.password.value;
     const imageFile = form.image.files[0];
 
     if (!validatePassword(password)) {
-      setLoading(false);
-      setPasswordError(
-        "Password must be at least 6 characters and include uppercase, lowercase, number & special character."
+      toast.error(
+        "Password must be 6+ chars and include uppercase, lowercase, number & special character."
       );
       return;
     }
 
+    const toastId = toast.loading("Creating account...");
+    setLoading(true);
+
     try {
-      // 1️⃣ upload image (optional)
+      // 1) upload image (optional)
       let photoURL = "";
-
-      if (imageFile && imageHostingKey) {
-        const formData = new FormData();
-        formData.append("image", imageFile);
-
-        const res = await fetch(imageHostingUrl, {
-          method: "POST",
-          body: formData,
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          photoURL = data.data.display_url;
+      if (imageFile) {
+        const uploaded = await uploadImageToImgbb(imageFile);
+        if (uploaded) {
+          photoURL = uploaded;
+        } else if (imageHostingKey) {
+          toast.error("Image upload failed (continuing without photo).");
         }
       }
 
-      // 2️⃣ create firebase user
+      // 2) create firebase user
       const result = await registerUser(email, password);
       const currentUser = result.user;
 
-      // 3️⃣ update firebase profile
+      // 3) update firebase profile
       await updateUserProfile(name, photoURL);
 
-      // 🔥 4️⃣ SAVE USER TO MONGODB (CRITICAL FIX)
-      await fetch(`${API_URL}/users`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          email: currentUser.email,
-        }),
-      });
+      // 4) save user to MongoDB
+      await saveUserToDB(currentUser.email);
 
-      // 5️⃣ reset & redirect
+      // 5) reset & redirect
       form.reset();
+      toast.success("✅ Registration successful!", { id: toastId });
       navigate("/");
     } catch (err) {
       console.error(err);
-      setError(err.message);
+
+      // Friendly message
+      const msg =
+        err?.code === "auth/email-already-in-use"
+          ? "This email is already registered."
+          : err?.message || "Registration failed.";
+
+      toast.error(msg, { id: toastId });
     } finally {
       setLoading(false);
     }
@@ -94,28 +124,22 @@ const Register = () => {
   // GOOGLE LOGIN
   // ======================
   const handleGoogleLogin = async () => {
+    if (loading) return;
+
+    const toastId = toast.loading("Signing in with Google...");
+    setLoading(true);
+
     try {
-      setError("");
-      setLoading(true);
-
       const result = await loginWithGoogle();
-      const user = result.user;
+      const gUser = result.user;
 
-      // 🔥 SAVE GOOGLE USER TO MONGODB
-      await fetch(`${API_URL}/users`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          email: user.email,
-        }),
-      });
+      await saveUserToDB(gUser.email);
 
+      toast.success("✅ Google login successful!", { id: toastId });
       navigate("/");
     } catch (err) {
       console.error(err);
-      setError(err.message);
+      toast.error("Google login failed. Try again.", { id: toastId });
     } finally {
       setLoading(false);
     }
@@ -154,17 +178,11 @@ const Register = () => {
             className="w-full border px-3 py-2 rounded"
           />
 
-          {passwordError && (
-            <p className="text-xs text-red-500">{passwordError}</p>
-          )}
-
           <input type="file" name="image" accept="image/*" />
-
-          {error && <p className="text-xs text-red-500">{error}</p>}
 
           <button
             disabled={loading}
-            className="w-full bg-gray-900 text-white py-2 rounded"
+            className="w-full bg-gray-900 text-white py-2 rounded disabled:opacity-60"
           >
             {loading ? "Creating..." : "Register"}
           </button>
@@ -174,7 +192,8 @@ const Register = () => {
 
         <button
           onClick={handleGoogleLogin}
-          className="w-full border py-2 rounded"
+          disabled={loading}
+          className="w-full border py-2 rounded disabled:opacity-60"
         >
           Continue with Google
         </button>

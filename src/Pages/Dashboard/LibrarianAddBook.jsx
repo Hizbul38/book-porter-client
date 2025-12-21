@@ -1,6 +1,7 @@
 import { useContext, useState } from "react";
 import { BooksContext } from "../../Providers/BooksProvider";
 import { AuthContext } from "../../Providers/AuthProvider";
+import Swal from "sweetalert2";
 
 const LibrarianAddBook = () => {
   const { addBook } = useContext(BooksContext);
@@ -13,7 +14,11 @@ const LibrarianAddBook = () => {
     const form = e.target;
 
     if (!user?.email) {
-      alert("User not logged in");
+      Swal.fire({
+        icon: "info",
+        title: "Login required",
+        text: "User not logged in",
+      });
       return;
     }
 
@@ -23,14 +28,40 @@ const LibrarianAddBook = () => {
     const status = (form.status.value || "unpublished").toLowerCase();
     const price = Number(form.price.value);
 
-    if (!name) return alert("Book name is required");
-    if (!author) return alert("Author is required");
+    if (!name)
+      return Swal.fire({
+        icon: "warning",
+        title: "Missing book name",
+        text: "Book name is required",
+      });
+
+    if (!author)
+      return Swal.fire({
+        icon: "warning",
+        title: "Missing author",
+        text: "Author is required",
+      });
+
     if (!image.startsWith("http"))
-      return alert("Please provide a valid image URL (http/https)");
+      return Swal.fire({
+        icon: "warning",
+        title: "Invalid image URL",
+        text: "Please provide a valid image URL (http/https)",
+      });
+
     if (!["published", "unpublished"].includes(status))
-      return alert("Status must be published/unpublished");
+      return Swal.fire({
+        icon: "warning",
+        title: "Invalid status",
+        text: "Status must be published/unpublished",
+      });
+
     if (Number.isNaN(price) || price <= 0)
-      return alert("Price must be a number greater than 0");
+      return Swal.fire({
+        icon: "warning",
+        title: "Invalid price",
+        text: "Price must be a number greater than 0",
+      });
 
     const newBook = {
       name,
@@ -49,11 +80,22 @@ const LibrarianAddBook = () => {
       if (saved) {
         form.reset();
         form.status.value = "unpublished";
-        alert("✅ Book added successfully!");
+
+        Swal.fire({
+          icon: "success",
+          title: "Success",
+          text: "✅ Book added successfully!",
+          timer: 1300,
+          showConfirmButton: false,
+        });
       }
     } catch (err) {
       console.error(err);
-      alert("Failed to add book");
+      Swal.fire({
+        icon: "error",
+        title: "Failed",
+        text: "Failed to add book",
+      });
     } finally {
       setSubmitting(false);
     }

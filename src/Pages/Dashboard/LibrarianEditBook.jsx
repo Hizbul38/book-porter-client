@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AuthContext } from "../../Providers/AuthProvider";
 import { BooksContext } from "../../Providers/BooksProvider";
+import Swal from "sweetalert2";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -83,7 +84,12 @@ const LibrarianEditBook = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!user) return alert("Please login first");
+    if (!user)
+      return Swal.fire({
+        icon: "info",
+        title: "Login required",
+        text: "Please login first",
+      });
 
     const cleanName = name.trim();
     const cleanAuthor = author.trim();
@@ -93,14 +99,40 @@ const LibrarianEditBook = () => {
     const cleanDescription = description.trim();
     const priceNum = Number(price);
 
-    if (!cleanName) return alert("Book name required");
-    if (!cleanAuthor) return alert("Author required");
+    if (!cleanName)
+      return Swal.fire({
+        icon: "warning",
+        title: "Missing book name",
+        text: "Book name required",
+      });
+
+    if (!cleanAuthor)
+      return Swal.fire({
+        icon: "warning",
+        title: "Missing author",
+        text: "Author required",
+      });
+
     if (!cleanImage.startsWith("http"))
-      return alert("Valid image URL required (http/https)");
+      return Swal.fire({
+        icon: "warning",
+        title: "Invalid image URL",
+        text: "Valid image URL required (http/https)",
+      });
+
     if (!["published", "unpublished"].includes(cleanStatus))
-      return alert("Invalid status");
+      return Swal.fire({
+        icon: "warning",
+        title: "Invalid status",
+        text: "Invalid status",
+      });
+
     if (Number.isNaN(priceNum) || priceNum <= 0)
-      return alert("Price must be greater than 0");
+      return Swal.fire({
+        icon: "warning",
+        title: "Invalid price",
+        text: "Price must be greater than 0",
+      });
 
     try {
       setSaving(true);
@@ -121,11 +153,23 @@ const LibrarianEditBook = () => {
       // ✅ refresh lists
       await Promise.all([fetchLibrarianBooks?.(), fetchBooks?.()]);
 
-      alert("✅ Book updated successfully!");
+      await Swal.fire({
+        icon: "success",
+        title: "Updated",
+        text: "✅ Book updated successfully!",
+        timer: 1300,
+        showConfirmButton: false,
+      });
+
       navigate("/dashboard/librarian/my-books");
     } catch (e) {
       console.error("save error:", e);
       setError("Failed to save changes");
+      Swal.fire({
+        icon: "error",
+        title: "Save failed",
+        text: "Failed to save changes",
+      });
     } finally {
       setSaving(false);
     }

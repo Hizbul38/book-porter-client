@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
+import { Toaster } from "react-hot-toast";
 
 import router from "./Routes/Router";
 import "./index.css";
@@ -16,6 +17,9 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PK);
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
+    {/* ✅ Toast Provider */}
+    <Toaster position="top-right" reverseOrder={false} />
+
     <Elements stripe={stripePromise}>
       <AuthProvider>
         <BooksProvider>
