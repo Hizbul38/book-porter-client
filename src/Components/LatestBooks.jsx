@@ -77,7 +77,7 @@ const LatestBooksSection = () => {
     list.sort((a, b) => getTime(b) - getTime(a));
 
     // ✅ only latest 6
-    return list.slice(0, 6);
+    return list.slice(0, 8);
   }, [books]);
 
   if (loading) {
