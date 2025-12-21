@@ -1,10 +1,12 @@
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { BooksContext } from "../../Providers/BooksProvider";
 import { AuthContext } from "../../Providers/AuthProvider";
 
 const LibrarianAddBook = () => {
   const { addBook } = useContext(BooksContext);
   const { user } = useContext(AuthContext);
+
+  const [submitting, setSubmitting] = useState(false);
 
   const handleAddBook = async (e) => {
     e.preventDefault();
@@ -15,41 +17,55 @@ const LibrarianAddBook = () => {
       return;
     }
 
-    const imageUrl = form.image.value.trim();
+    const name = form.name.value.trim();
+    const author = form.author.value.trim();
+    const image = form.image.value.trim();
+    const status = (form.status.value || "unpublished").toLowerCase();
+    const price = Number(form.price.value);
 
-    // 🔥 Image URL validation (important)
-    if (!imageUrl.startsWith("http")) {
-      alert("Please provide a valid image URL (must start with http/https)");
-      return;
-    }
+    if (!name) return alert("Book name is required");
+    if (!author) return alert("Author is required");
+    if (!image.startsWith("http"))
+      return alert("Please provide a valid image URL (http/https)");
+    if (!["published", "unpublished"].includes(status))
+      return alert("Status must be published/unpublished");
+    if (Number.isNaN(price) || price <= 0)
+      return alert("Price must be a number greater than 0");
 
     const newBook = {
-      title: form.title.value,
-      author: form.author.value,
-      image: imageUrl,              // ✅ FIXED (img ❌ → image ✅)
-      price: parseFloat(form.price.value),
-      category: form.category.value || "Others",
-      description: form.description.value || "",
-      // status librarian set করবে না → backend default pending
+      name,
+      author,
+      image,
+      status,
+      price,
+      category: form.category.value.trim() || "Others",
+      description: form.description.value.trim() || "",
     };
 
-    // 🔥 pass librarianEmail explicitly
-    const saved = await addBook(newBook, user.email);
+    try {
+      setSubmitting(true);
+      const saved = await addBook(newBook); // ✅ only one param
 
-    if (saved) {
-      form.reset();
-      alert("✅ Book added successfully (Pending for approval)");
+      if (saved) {
+        form.reset();
+        form.status.value = "unpublished";
+        alert("✅ Book added successfully!");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to add book");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <section>
       <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-        Add New Book
+        Add Book
       </h1>
       <p className="text-sm text-gray-600 mb-6">
-        Add a new book to the library catalog. Newly added books require admin
-        approval before being published.
+        If status is <b>unpublished</b>, it will NOT appear on All Books page.
       </p>
 
       <div className="bg-white border border-gray-200 rounded-xl p-5 max-w-xl">
@@ -58,10 +74,10 @@ const LibrarianAddBook = () => {
             <label className="block text-xs text-gray-600 mb-1">Book Name</label>
             <input
               type="text"
-              name="title"
+              name="name"
               required
               className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
-              placeholder="Enter book title"
+              placeholder="Enter book name"
             />
           </div>
 
@@ -87,6 +103,18 @@ const LibrarianAddBook = () => {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
               placeholder="https://example.com/book.jpg"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Status</label>
+            <select
+              name="status"
+              defaultValue="unpublished"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500 bg-white"
+            >
+              <option value="published">published</option>
+              <option value="unpublished">unpublished</option>
+            </select>
           </div>
 
           <div className="grid gap-4 grid-cols-2">
@@ -120,7 +148,7 @@ const LibrarianAddBook = () => {
 
           <div>
             <label className="block text-xs text-gray-600 mb-1">
-              Short Description (optional)
+              Description (optional)
             </label>
             <textarea
               name="description"
@@ -132,9 +160,12 @@ const LibrarianAddBook = () => {
 
           <button
             type="submit"
-            className="mt-2 px-4 py-2.5 rounded-full bg-gray-900 text-white text-sm font-medium hover:bg-gray-800"
+            disabled={submitting}
+            className={`mt-2 px-4 py-2.5 rounded-full text-white text-sm font-medium ${
+              submitting ? "bg-gray-400" : "bg-gray-900 hover:bg-gray-800"
+            }`}
           >
-            Add Book
+            {submitting ? "Adding..." : "Add Book"}
           </button>
         </form>
       </div>

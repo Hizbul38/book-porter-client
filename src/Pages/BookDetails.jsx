@@ -1,14 +1,15 @@
-import { useContext, useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useContext, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { AuthContext } from "../Providers/AuthProvider";
 import { OrderContext } from "../Providers/OrderProvider";
 
-const FALLBACK_IMAGE =
-  "https://via.placeholder.com/600x800?text=No+Image";
+const API_URL = import.meta.env.VITE_API_URL;
 
-// 🔥 old (img) + new (image) support
+const FALLBACK_IMAGE = "https://via.placeholder.com/600x800?text=No+Image";
+
 const getBookImage = (book) => {
-  if (book?.image && book.image.startsWith("http")) return book.image;
-  if (book?.img && book.img.startsWith("http")) return book.img;
+  const img = book?.image || book?.img || book?.photo || book?.cover;
+  if (typeof img === "string" && img.startsWith("http")) return img;
   return FALLBACK_IMAGE;
 };
 
@@ -16,36 +17,60 @@ const BookDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const { user } = useContext(AuthContext);
   const { addOrderToList } = useContext(OrderContext);
 
   const [book, setBook] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loadingBook, setLoadingBook] = useState(true);
+  const [bookError, setBookError] = useState("");
 
-  // Order modal
+  // Modal + form
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [placing, setPlacing] = useState(false);
 
+  const displayName = useMemo(() => {
+    return user?.displayName || user?.name || "—";
+  }, [user]);
+
   // ===============================
-  // Load single book
+  // Load book details
   // ===============================
   useEffect(() => {
     const loadBook = async () => {
       try {
-        setLoading(true);
-        const res = await fetch(`http://localhost:3000/books/${id}`);
-        const data = await res.json();
+        setLoadingBook(true);
+        setBookError("");
 
-        if (data?.message) setBook(null);
-        else setBook(data);
-      } catch (error) {
-        console.error("Book details fetch error:", error);
+        if (!id) {
+          setBook(null);
+          setBookError("Invalid book id.");
+          return;
+        }
+
+        const res = await fetch(`${API_URL}/books/${encodeURIComponent(id)}`);
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          setBook(null);
+          setBookError(text || "Book not found");
+          return;
+        }
+
+        const data = await res.json();
+        if (data?._id) {
+          setBook(data);
+        } else {
+          setBook(null);
+          setBookError("Book not found");
+        }
+      } catch (err) {
+        console.error("Book load error:", err);
         setBook(null);
+        setBookError("Failed to load book.");
       } finally {
-        setLoading(false);
+        setLoadingBook(false);
       }
     };
 
@@ -53,86 +78,99 @@ const BookDetails = () => {
   }, [id]);
 
   // ===============================
-  // Order submit
+  // Open modal
+  // ===============================
+  const openOrderModal = () => {
+    if (!user) {
+      alert("Please login first");
+      navigate("/login");
+      return;
+    }
+    setIsModalOpen(true);
+  };
+
+  // ===============================
+  // Place order
   // ===============================
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
 
-    if (!name.trim() || !email.trim() || !phone.trim() || !address.trim()) {
-      alert("All fields are required.");
+    if (!user) {
+      alert("Please login first");
+      return navigate("/login");
+    }
+
+    const cleanPhone = phone.trim();
+    const cleanAddress = address.trim();
+
+    if (cleanPhone.length < 6) {
+      alert("Please enter a valid phone number");
+      return;
+    }
+    if (cleanAddress.length < 5) {
+      alert("Please enter a valid address");
       return;
     }
 
     try {
       setPlacing(true);
 
-      const orderPayload = {
-        bookId: book._id,
-        userName: name,
-        userEmail: email,
-        phone,
-        address,
-      };
+      const token = await user.getIdToken(true); // ✅ always fresh
 
-      const res = await fetch("http://localhost:3000/orders", {
+      const res = await fetch(`${API_URL}/orders`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(orderPayload),
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          bookId: book?._id,
+          phone: cleanPhone,
+          address: cleanAddress,
+        }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
         alert(data?.message || "Order failed");
         return;
       }
 
-      // update MyOrders instantly
-      addOrderToList(data);
+      addOrderToList?.(data);
 
-      // reset
-      setName("");
-      setEmail("");
       setPhone("");
       setAddress("");
       setIsModalOpen(false);
 
       alert("✅ Order placed successfully!");
       navigate("/dashboard/my-orders");
-    } catch (error) {
-      console.error("Order create error:", error);
-      alert("Something went wrong!");
+    } catch (err) {
+      console.error("Order error:", err);
+      alert("Something went wrong");
     } finally {
       setPlacing(false);
     }
   };
 
   // ===============================
-  // Loading / not found
+  // UI States
   // ===============================
-  if (loading) {
-    return (
-      <section className="py-10">
-        <div className="max-w-4xl mx-auto px-4">
-          <p className="text-gray-700">Loading...</p>
-        </div>
-      </section>
-    );
+  if (loadingBook) {
+    return <p className="p-6 text-sm text-gray-600">Loading book...</p>;
   }
 
   if (!book) {
     return (
-      <section className="py-10">
-        <div className="max-w-4xl mx-auto px-4">
-          <p className="text-gray-700 mb-4">Book not found.</p>
-          <button
-            onClick={() => navigate(-1)}
-            className="px-4 py-2 text-sm rounded-full border border-gray-300 hover:bg-gray-100"
-          >
-            Back
-          </button>
-        </div>
-      </section>
+      <div className="max-w-4xl mx-auto px-4 py-10">
+        <p className="text-sm text-red-600">{bookError || "Book not found"}</p>
+        <button
+          onClick={() => navigate(-1)}
+          className="mt-4 px-4 py-2 border rounded-md text-sm"
+        >
+          Back
+        </button>
+      </div>
     );
   }
 
@@ -141,17 +179,17 @@ const BookDetails = () => {
       <div className="max-w-5xl mx-auto px-4">
         <button
           onClick={() => navigate(-1)}
-          className="mb-4 text-sm text-gray-500 hover:text-gray-800"
+          className="mb-4 text-sm text-gray-500"
         >
-          ← Back to All Books
+          ← Back
         </button>
 
         <div className="grid gap-8 md:grid-cols-2">
           {/* IMAGE */}
-          <div className="w-full h-72 md:h-96 bg-gray-100 rounded-xl overflow-hidden">
+          <div className="h-72 md:h-96 bg-gray-100 rounded-xl overflow-hidden">
             <img
               src={getBookImage(book)}
-              alt={book.title}
+              alt={book.title || "Book"}
               onError={(e) => (e.currentTarget.src = FALLBACK_IMAGE)}
               className="w-full h-full object-cover"
             />
@@ -159,88 +197,69 @@ const BookDetails = () => {
 
           {/* DETAILS */}
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-              {book.title}
-            </h1>
-            <p className="mt-1 text-sm text-gray-600">by {book.author}</p>
+            <h1 className="text-2xl font-bold">{book.title}</h1>
+            <p className="text-sm text-gray-500">by {book.author || "—"}</p>
 
-            <p className="mt-3 text-xs inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-700">
-              {book.category || "Others"}
-            </p>
-
-            <p className="mt-4 text-sm text-gray-700 leading-relaxed">
+            <p className="mt-4 text-sm text-gray-700">
               {book.description || "No description available."}
             </p>
 
-            <div className="mt-6 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide">
-                  Price
-                </p>
-                <p className="text-xl font-semibold text-gray-900">
-                  ${Number(book.price).toFixed(2)}
-                </p>
-              </div>
+            <p className="mt-6 text-xl font-semibold">
+              ${Number(book.price || 0).toFixed(2)}
+            </p>
 
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="px-5 py-2.5 rounded-full bg-gray-900 text-white text-sm font-medium hover:bg-gray-800"
-              >
-                Order Now
-              </button>
-            </div>
+            <button
+              onClick={openOrderModal}
+              className="mt-6 px-5 py-2 rounded-full bg-gray-900 text-white text-sm hover:bg-gray-800"
+            >
+              Order Now
+            </button>
 
-            <div className="mt-6 space-y-2 text-xs text-gray-500">
-              <p>Delivery: 2–5 business days (demo)</p>
-              <p>Return Policy: 7 days from delivery (demo)</p>
-            </div>
+            <p className="mt-2 text-xs text-gray-500">
+              Orders start as <span className="font-semibold">pending</span> and{" "}
+              payment status <span className="font-semibold">unpaid</span>.
+            </p>
           </div>
         </div>
 
         {/* ORDER MODAL */}
         {isModalOpen && (
-          <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40">
-            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6 relative">
+          <div
+            className="fixed inset-0 z-30 bg-black/40 flex items-center justify-center"
+            onClick={() => setIsModalOpen(false)}
+          >
+            <div
+              className="bg-white rounded-xl p-6 w-full max-w-md mx-4 relative"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl"
+                className="absolute top-3 right-3 text-xl text-gray-400 hover:text-gray-600"
+                aria-label="Close"
               >
                 ×
               </button>
 
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">
-                Place Your Order
-              </h2>
-              <p className="text-xs text-gray-500 mb-4">
-                Fill in your details to request home delivery for this book.
-              </p>
+              <h2 className="text-lg font-semibold mb-4">Place Your Order</h2>
 
               <form onSubmit={handlePlaceOrder} className="space-y-3 text-sm">
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">
-                    Name
-                  </label>
+                  <label className="block text-xs text-gray-600 mb-1">Name</label>
                   <input
                     type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    placeholder="Enter your name"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+                    value={displayName}
+                    readOnly
+                    className="w-full border px-3 py-2 rounded-md bg-gray-100"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">
-                    Email
-                  </label>
+                  <label className="block text-xs text-gray-600 mb-1">Email</label>
                   <input
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    placeholder="Enter your email"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+                    value={user?.email || ""}
+                    readOnly
+                    className="w-full border px-3 py-2 rounded-md bg-gray-100"
                   />
                 </div>
 
@@ -253,32 +272,28 @@ const BookDetails = () => {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     required
-                    placeholder="Enter your phone number"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+                    placeholder="Enter phone number"
+                    className="w-full border px-3 py-2 rounded-md"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">
-                    Address
-                  </label>
+                  <label className="block text-xs text-gray-600 mb-1">Address</label>
                   <textarea
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     required
                     rows={3}
-                    placeholder="House, street, city, zip code"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500 resize-none"
+                    placeholder="House, street, city"
+                    className="w-full border px-3 py-2 rounded-md resize-none"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={placing}
-                  className={`w-full mt-2 px-4 py-2.5 rounded-full text-white text-sm font-medium ${
-                    placing
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-gray-900 hover:bg-gray-800"
+                  className={`w-full mt-2 py-2 rounded-md text-white ${
+                    placing ? "bg-gray-400" : "bg-gray-900 hover:bg-gray-800"
                   }`}
                 >
                   {placing ? "Placing..." : "Place Order"}

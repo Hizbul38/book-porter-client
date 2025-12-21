@@ -1,4 +1,3 @@
-// src/Pages/Dashboard/PaymentSuccess.jsx
 import { useNavigate } from "react-router-dom";
 
 const PaymentSuccess = () => {
@@ -11,7 +10,7 @@ const PaymentSuccess = () => {
       </h1>
 
       <p className="text-sm md:text-base text-gray-600 mb-6">
-        Your payment has been completed successfully.  
+        Your payment has been completed successfully.
         An invoice has been generated automatically.
       </p>
 
